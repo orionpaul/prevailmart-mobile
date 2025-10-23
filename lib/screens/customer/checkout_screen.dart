@@ -59,19 +59,31 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       final cart = context.read<CartProvider>();
       final auth = context.read<AuthProvider>();
 
+      // Parse address - expect format: "street, city, state zip"
+      final address = _addressController.text.trim();
+      final addressParts = address.split(',').map((e) => e.trim()).toList();
+
+      // Create shipping address object matching backend expectations
       final orderData = {
-        'deliveryAddress': _addressController.text.trim(),
-        'phone': _phoneController.text.trim(),
-        'paymentMethod': _paymentMethod,
+        'shippingAddress': {
+          'street': addressParts.isNotEmpty ? addressParts[0] : address,
+          'city': addressParts.length > 1 ? addressParts[1] : 'Harare',
+          'state': addressParts.length > 2 ? addressParts[2] : 'Harare Province',
+          'zipCode': '00263',
+          'country': 'Zimbabwe',
+          'coordinates': {
+            'latitude': -17.8252,
+            'longitude': 31.0335,
+          }
+        },
+        'paymentMethod': _paymentMethod == 'cash' ? 'cash_on_delivery' : 'credit_card',
+        'customerPhone': _phoneController.text.trim(),
+        'customerName': auth.isAuthenticated ? auth.user?.name : _nameController.text.trim(),
         'notes': _notesController.text.trim(),
+        'shippingCost': 5.0,
       };
 
-      // For guest users, include name and email
-      if (!auth.isAuthenticated) {
-        orderData['guestName'] = _nameController.text.trim();
-        orderData['guestEmail'] = _emailController.text.trim();
-        orderData['isGuest'] = 'true';
-      }
+      print('📦 Placing order with data: $orderData');
 
       final response = await apiService.post(
         ApiConfig.orders,
