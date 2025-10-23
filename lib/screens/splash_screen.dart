@@ -133,7 +133,7 @@ class _SplashScreenState extends State<SplashScreen>
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          // Elegant icon
+                          // Logo with elegant animation
                           AnimatedBuilder(
                             animation: _pulseController,
                             builder: (context, child) {
@@ -141,30 +141,23 @@ class _SplashScreenState extends State<SplashScreen>
                               return Transform.scale(
                                 scale: pulse,
                                 child: Container(
-                                  width: 120,
-                                  height: 120,
+                                  width: 140,
+                                  height: 140,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [
-                                        AppColors.primary,
-                                        AppColors.secondary,
-                                      ],
-                                    ),
+                                    color: AppColors.white,
                                     boxShadow: [
                                       BoxShadow(
-                                        color: AppColors.primary.withOpacity(0.3),
-                                        blurRadius: 40,
+                                        color: AppColors.primary.withOpacity(0.2),
+                                        blurRadius: 30,
                                         spreadRadius: 5,
                                       ),
                                     ],
                                   ),
-                                  child: const Icon(
-                                    Icons.shopping_bag_outlined,
-                                    size: 60,
-                                    color: AppColors.white,
+                                  padding: const EdgeInsets.all(20),
+                                  child: Image.asset(
+                                    'assets/logo/logo.png',
+                                    fit: BoxFit.contain,
                                   ),
                                 ),
                               );
