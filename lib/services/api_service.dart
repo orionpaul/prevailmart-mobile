@@ -1,0 +1,192 @@
+import 'package:dio/dio.dart';
+import '../config/api_config.dart';
+import 'storage_service.dart';
+
+/// API Service - HTTP Client for all API calls
+class ApiService {
+  late final Dio _dio;
+  String? _token;
+
+  ApiService() {
+    _dio = Dio(BaseOptions(
+      baseUrl: ApiConfig.baseUrl,
+      connectTimeout: const Duration(seconds: 60),
+      receiveTimeout: const Duration(seconds: 60),
+      sendTimeout: const Duration(seconds: 60),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    ));
+
+    // Add interceptors for logging and error handling
+    _dio.interceptors.add(InterceptorsWrapper(
+      onRequest: (options, handler) async {
+        // Add token to all requests if available
+        if (_token != null) {
+          options.headers['Authorization'] = 'Bearer $_token';
+        }
+        print('🌐 ${options.method} ${options.path}');
+        return handler.next(options);
+      },
+      onResponse: (response, handler) {
+        print('✅ ${response.statusCode} ${response.requestOptions.path}');
+        return handler.next(response);
+      },
+      onError: (error, handler) {
+        print('❌ Error: ${error.response?.statusCode} ${error.message}');
+        return handler.next(error);
+      },
+    ));
+
+    // Load token from storage
+    _loadToken();
+  }
+
+  /// Load token from secure storage
+  Future<void> _loadToken() async {
+    _token = await storageService.getSecure(ApiConfig.tokenKey);
+    print('🔑 Token loaded: ${_token != null ? "Yes" : "No"}');
+  }
+
+  /// Save token to secure storage
+  Future<void> saveToken(String token) async {
+    _token = token;
+    await storageService.saveSecure(ApiConfig.tokenKey, token);
+    print('💾 Token saved securely');
+  }
+
+  /// Remove token from storage
+  Future<void> removeToken() async {
+    _token = null;
+    await storageService.deleteSecure(ApiConfig.tokenKey);
+    print('🗑️ Token removed');
+  }
+
+  /// GET Request
+  Future<Response> get(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+  }) async {
+    try {
+      return await _dio.get(
+        path,
+        queryParameters: queryParameters,
+        options: options,
+      );
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// POST Request
+  Future<Response> post(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+  }) async {
+    try {
+      return await _dio.post(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+        options: options,
+      );
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// PUT Request
+  Future<Response> put(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+  }) async {
+    try {
+      return await _dio.put(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+        options: options,
+      );
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// DELETE Request
+  Future<Response> delete(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+  }) async {
+    try {
+      return await _dio.delete(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+        options: options,
+      );
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// PATCH Request
+  Future<Response> patch(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+  }) async {
+    try {
+      return await _dio.patch(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+        options: options,
+      );
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Handle Dio errors
+  String _handleError(DioException error) {
+    String errorMessage = 'Something went wrong';
+
+    if (error.response != null) {
+      // Server responded with error
+      final statusCode = error.response?.statusCode;
+      final data = error.response?.data;
+
+      if (data is Map<String, dynamic> && data.containsKey('message')) {
+        errorMessage = data['message'];
+      } else if (statusCode == 401) {
+        errorMessage = 'Unauthorized. Please login again.';
+      } else if (statusCode == 404) {
+        errorMessage = 'Resource not found';
+      } else if (statusCode == 500) {
+        errorMessage = 'Server error. Please try again later.';
+      }
+    } else {
+      // Network or other errors
+      if (error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.receiveTimeout) {
+        errorMessage = 'Connection timeout. Please check your internet.';
+      } else if (error.type == DioExceptionType.unknown) {
+        errorMessage = 'No internet connection';
+      }
+    }
+
+    return errorMessage;
+  }
+}
+
+/// Singleton instance
+final apiService = ApiService();

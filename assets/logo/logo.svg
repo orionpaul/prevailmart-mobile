@@ -1,0 +1,15 @@
+<svg width="240" height="48" viewBox="0 0 240 48" xmlns="http://www.w3.org/2000/svg">
+  <!-- Blue background box for "prevail" -->
+  <rect x="0" y="0" width="126" height="48" fill="#4A6CB7"/>
+
+  <!-- White "prevail" text -->
+  <text x="63" y="31" font-family="Arial, sans-serif" font-size="25" font-weight="bold" text-anchor="middle" fill="#FFFFFF">prevail</text>
+
+  <!-- Three vertical blue lines separator -->
+  <rect x="135" y="9" width="2.4" height="30" fill="#4A9BD9"/>
+  <rect x="141" y="9" width="2.4" height="30" fill="#4A9BD9"/>
+  <rect x="147" y="9" width="2.4" height="30" fill="#4A9BD9"/>
+
+  <!-- Black cursive "Mart" text -->
+  <text x="189" y="33" font-family="'Brush Script MT', 'Lucida Handwriting', cursive" font-size="30" font-weight="normal" text-anchor="middle" fill="#000000" style="font-style: italic;">Mart</text>
+</svg>
