@@ -63,7 +63,7 @@ class _ProductCardState extends State<ProductCard> {
                   child: ClipRRect(
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                     child: Container(
-                      height: 130,
+                      height: 120,
                       color: AppColors.grey100,
                       child: widget.product.displayImage != null
                           ? CachedNetworkImage(
@@ -216,6 +216,7 @@ class _ProductCardState extends State<ProductCard> {
                 ],
               ),
             ),
+          ),
           ],
         ),
       ),

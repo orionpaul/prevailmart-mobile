@@ -45,5 +45,15 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+
+	<!-- Location Permissions -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>PrevailMart needs your location to show delivery options and nearby stores</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>PrevailMart needs your location to provide accurate delivery tracking</string>
+
+	<!-- Google Maps API Key -->
+	<key>GMSApiKey</key>
+	<string>AIzaSyC6mPyRkY4XFhclhKp0shUoMkojPIxkpZ4</string>
 </dict>
 </plist>

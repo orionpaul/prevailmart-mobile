@@ -29,7 +29,7 @@ class CartProvider with ChangeNotifier {
 
   /// Fetch cart from API (authenticated) or local storage (guest)
   Future<void> fetchCart() async {
-    print('🛒 Fetching cart...');
+    print('🛒 Fetching cart (Auth: $_isAuthenticated)...');
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -37,14 +37,36 @@ class CartProvider with ChangeNotifier {
     try {
       if (_isAuthenticated) {
         // Authenticated - fetch from server
+        print('📡 GET ${ApiConfig.cart}');
         final response = await apiService.get(ApiConfig.cart);
 
+        print('📬 Response status: ${response.statusCode}');
+        print('📬 Response data: ${response.data}');
+
         if (response.statusCode == 200) {
-          _cart = Cart.fromJson(response.data);
+          final dynamic responseData = response.data;
+
+          // Handle different response formats
+          if (responseData is Map<String, dynamic>) {
+            // Check if cart is nested in response
+            if (responseData.containsKey('cart')) {
+              _cart = Cart.fromJson(responseData['cart']);
+            } else if (responseData.containsKey('data')) {
+              _cart = Cart.fromJson(responseData['data']);
+            } else {
+              // Assume the whole response is the cart
+              _cart = Cart.fromJson(responseData);
+            }
+          } else {
+            _cart = Cart(items: [], total: 0.0);
+          }
+
           print('✅ Cart fetched from server: ${_cart?.itemCount} items');
+          print('📦 Cart items: ${_cart?.items.map((i) => i.product.name).toList()}');
         }
       } else {
         // Guest - load from local storage
+        print('💾 Loading guest cart from local storage');
         final cartData = await storageService.getJson('guest_cart');
         if (cartData != null) {
           _cart = Cart.fromJson(cartData);
@@ -57,8 +79,21 @@ class CartProvider with ChangeNotifier {
     } catch (e) {
       print('❌ Failed to fetch cart: $e');
       _error = e.toString();
-      // Initialize empty cart on error
-      _cart = Cart(items: [], total: 0.0);
+
+      // Try to load from local storage as fallback
+      print('🔄 Trying local storage as fallback...');
+      try {
+        final cartData = await storageService.getJson('guest_cart');
+        if (cartData != null) {
+          _cart = Cart.fromJson(cartData);
+          print('✅ Loaded cart from local storage: ${_cart?.itemCount} items');
+        } else {
+          _cart = Cart(items: [], total: 0.0);
+        }
+      } catch (e2) {
+        print('❌ Fallback also failed: $e2');
+        _cart = Cart(items: [], total: 0.0);
+      }
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -128,69 +163,72 @@ class CartProvider with ChangeNotifier {
 
     try {
       if (_isAuthenticated) {
-        // Authenticated - add via API
+        // Authenticated - try to add via API first
         print('📡 Sending request to ${ApiConfig.cart}');
         print('📦 Product ID: ${product.id}');
-        final response = await apiService.post(
-          ApiConfig.cart,
-          data: {
-            'productId': product.id,
-            'quantity': quantity,
-          },
-        );
 
-        print('📬 Response status: ${response.statusCode}');
-        print('📬 Response data: ${response.data}');
+        try {
+          final response = await apiService.post(
+            ApiConfig.cart,
+            data: {
+              'productId': product.id,
+              'quantity': quantity,
+            },
+          );
 
-        if (response.statusCode == 200 || response.statusCode == 201) {
-          _cart = Cart.fromJson(response.data);
-          print('✅ Added to cart successfully (server) - Cart now has ${_cart?.itemCount} items');
-          _isLoading = false;
-          notifyListeners();
-          return true;
-        } else {
-          throw Exception('Server returned ${response.statusCode}');
+          print('📬 Response status: ${response.statusCode}');
+          print('📬 Response data: ${response.data}');
+
+          if (response.statusCode == 200 || response.statusCode == 201) {
+            _cart = Cart.fromJson(response.data);
+            print('✅ Added to cart successfully (server) - Cart now has ${_cart?.itemCount} items');
+            _isLoading = false;
+            notifyListeners();
+            return true;
+          }
+        } catch (serverError) {
+          print('⚠️ Server error: $serverError');
+          print('🔄 Falling back to guest cart...');
+          // Don't set _isAuthenticated to false, just fall through to guest cart
         }
-      } else {
-        // Guest - add to local cart
-        _cart ??= Cart(items: [], total: 0.0);
-
-        // Create a mutable copy of items
-        final updatedItems = List<CartItem>.from(_cart!.items);
-
-        // Check if item already exists
-        final existingIndex = updatedItems.indexWhere((item) => item.productId == product.id);
-
-        if (existingIndex >= 0) {
-          // Update quantity
-          updatedItems[existingIndex].quantity += quantity;
-        } else {
-          // Add new item
-          updatedItems.add(CartItem(
-            productId: product.id!,
-            product: product,
-            quantity: quantity,
-          ));
-        }
-
-        // Recalculate total
-        final newTotal = updatedItems.fold(0.0, (sum, item) => sum + item.subtotal);
-
-        // Create new cart with updated items and total
-        _cart = Cart(
-          id: _cart!.id,
-          items: updatedItems,
-          total: newTotal,
-        );
-
-        await _saveGuestCart();
-        print('✅ Added to guest cart successfully');
-        _isLoading = false;
-        notifyListeners();
-        return true;
       }
 
-      throw Exception('Failed to add to cart');
+      // Guest cart (or fallback from server error)
+      _cart ??= Cart(items: [], total: 0.0);
+
+      // Create a mutable copy of items
+      final updatedItems = List<CartItem>.from(_cart!.items);
+
+      // Check if item already exists
+      final existingIndex = updatedItems.indexWhere((item) => item.productId == product.id);
+
+      if (existingIndex >= 0) {
+        // Update quantity
+        updatedItems[existingIndex].quantity += quantity;
+      } else {
+        // Add new item
+        updatedItems.add(CartItem(
+          productId: product.id!,
+          product: product,
+          quantity: quantity,
+        ));
+      }
+
+      // Recalculate total
+      final newTotal = updatedItems.fold(0.0, (sum, item) => sum + item.subtotal);
+
+      // Create new cart with updated items and total
+      _cart = Cart(
+        id: _cart!.id,
+        items: updatedItems,
+        total: newTotal,
+      );
+
+      await _saveGuestCart();
+      print('✅ Added to guest cart successfully - Cart now has ${_cart?.itemCount} items');
+      _isLoading = false;
+      notifyListeners();
+      return true;
     } catch (e) {
       print('❌ Failed to add to cart: $e');
       _error = e.toString();

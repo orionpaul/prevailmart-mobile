@@ -10,6 +10,9 @@ import '../../widgets/customer/product_card.dart';
 import '../../widgets/customer/product_card_shimmer.dart';
 import 'cart_screen.dart';
 import 'products_screen.dart';
+import 'location_picker_screen.dart';
+import 'product_search_screen.dart';
+import '../../models/address_model.dart';
 import 'dart:async';
 
 /// Modern Home Screen - Matches reference design
@@ -26,6 +29,7 @@ class _HomeScreenNewState extends State<HomeScreenNew> {
   String _selectedCategory = 'All';
   bool _isLoading = true;
   Timer? _cacheTimer;
+  Address? _selectedAddress;
 
   @override
   void initState() {
@@ -115,26 +119,66 @@ class _HomeScreenNewState extends State<HomeScreenNew> {
       body: SafeArea(
         child: Column(
           children: [
-            // Header with Delivery Address & Cart
+            // Header with Logo, Delivery Address & Cart
             Container(
               padding: const EdgeInsets.all(16),
               color: AppColors.white,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Logo centered
+                  Center(
+                    child: Image.asset(
+                      'assets/logo/logo.png',
+                      height: 28,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Text(
+                          'PrevailMart',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
                         child: GestureDetector(
-                          onTap: () {
-                            // TODO: Navigate to address selection screen
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Address selection coming soon'),
-                                duration: Duration(seconds: 2),
+                          onTap: () async {
+                            // Navigate to location picker
+                            final Address? result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => LocationPickerScreen(
+                                  initialAddress: _selectedAddress,
+                                ),
                               ),
                             );
+
+                            if (result != null && mounted) {
+                              setState(() {
+                                _selectedAddress = result;
+                              });
+
+                              // Show success message
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Location set to ${result.shortAddress}'),
+                                  backgroundColor: AppColors.success,
+                                  duration: const Duration(seconds: 2),
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              );
+                            }
                           },
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -157,7 +201,7 @@ class _HomeScreenNewState extends State<HomeScreenNew> {
                                   const SizedBox(width: 4),
                                   Flexible(
                                     child: Text(
-                                      'Select delivery address',
+                                      _selectedAddress?.shortAddress ?? 'Select delivery address',
                                       style: const TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600,
@@ -303,8 +347,61 @@ class _HomeScreenNewState extends State<HomeScreenNew> {
                         child: Row(
                           children: [
                             Expanded(
+                              child: GestureDetector(
+                                onTap: () {
+                                  // Navigate to search screen
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const ProductSearchScreen(),
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.04),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    children: const [
+                                      Icon(
+                                        Icons.search,
+                                        color: AppColors.grey400,
+                                      ),
+                                      SizedBox(width: 12),
+                                      Text(
+                                        'Search product...',
+                                        style: TextStyle(
+                                          color: AppColors.grey400,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            GestureDetector(
+                              onTap: () {
+                                // Navigate to search screen with filter focus
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const ProductSearchScreen(),
+                                  ),
+                                );
+                              },
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
                                   color: AppColors.white,
                                   borderRadius: BorderRadius.circular(12),
@@ -316,44 +413,10 @@ class _HomeScreenNewState extends State<HomeScreenNew> {
                                     ),
                                   ],
                                 ),
-                                child: TextField(
-                                  decoration: const InputDecoration(
-                                    hintText: 'Search product...',
-                                    border: InputBorder.none,
-                                    icon: Icon(
-                                      Icons.search,
-                                      color: AppColors.grey400,
-                                    ),
-                                  ),
-                                  onSubmitted: (value) {
-                                    // Navigate to products screen with search
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => const ProductsScreen(),
-                                      ),
-                                    );
-                                  },
+                                child: const Icon(
+                                  Icons.tune,
+                                  color: AppColors.textPrimary,
                                 ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: AppColors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.04),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: const Icon(
-                                Icons.tune,
-                                color: AppColors.textPrimary,
                               ),
                             ),
                           ],

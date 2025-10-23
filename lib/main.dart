@@ -5,6 +5,7 @@ import 'providers/auth_provider.dart';
 import 'providers/cart_provider.dart';
 import 'providers/delivery_provider.dart';
 import 'services/storage_service.dart';
+import 'screens/splash_screen.dart';
 import 'screens/customer/customer_main_screen.dart';
 import 'screens/driver/driver_main_screen.dart';
 
@@ -42,7 +43,10 @@ class PrevailMartApp extends StatelessWidget {
           ),
           scaffoldBackgroundColor: AppColors.background,
         ),
-        home: const AppRoot(),
+        home: const SplashScreen(),
+        routes: {
+          '/home': (context) => const AppRoot(),
+        },
       ),
     );
   }
@@ -53,8 +57,43 @@ class PrevailMartApp extends StatelessWidget {
 /// GUEST CART: Guests can add items to cart (stored locally)
 /// Authentication required for: Checkout, orders
 /// NOTE: Admin/SuperAdmin access is on website dashboard only
-class AppRoot extends StatelessWidget {
+class AppRoot extends StatefulWidget {
   const AppRoot({super.key});
+
+  @override
+  State<AppRoot> createState() => _AppRootState();
+}
+
+class _AppRootState extends State<AppRoot> {
+  bool _initialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      _initialized = true;
+      _initializeApp();
+    }
+  }
+
+  Future<void> _initializeApp() async {
+    final auth = context.read<AuthProvider>();
+    final cart = context.read<CartProvider>();
+
+    // Wait for auth to initialize
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    // Set cart authentication state based on auth provider
+    if (auth.isAuthenticated) {
+      print('🔄 Setting cart authenticated state');
+      cart.setAuthenticated(true);
+      await cart.fetchCart();
+    } else {
+      print('🔄 Loading guest cart');
+      cart.setAuthenticated(false);
+      await cart.fetchCart();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

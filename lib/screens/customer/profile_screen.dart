@@ -3,6 +3,12 @@ import 'package:provider/provider.dart';
 import '../../config/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../auth/login_screen.dart';
+import 'edit_profile_screen.dart';
+import 'addresses_screen.dart';
+import 'orders_screen.dart';
+import 'notifications_settings_screen.dart';
+import 'help_support_screen.dart';
+import 'about_screen.dart';
 
 /// Profile Screen - User account and settings
 class ProfileScreen extends StatelessWidget {
@@ -121,7 +127,12 @@ class ProfileScreen extends StatelessWidget {
                           title: 'Edit Profile',
                           subtitle: 'Update your personal information',
                           onTap: () {
-                            // TODO: Navigate to edit profile
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const EditProfileScreen(),
+                              ),
+                            );
                           },
                         ),
                         _buildMenuItem(
@@ -129,7 +140,12 @@ class ProfileScreen extends StatelessWidget {
                           title: 'Delivery Addresses',
                           subtitle: 'Manage your delivery locations',
                           onTap: () {
-                            // TODO: Navigate to addresses
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const AddressesScreen(),
+                              ),
+                            );
                           },
                         ),
                         _buildMenuItem(
@@ -137,7 +153,12 @@ class ProfileScreen extends StatelessWidget {
                           title: 'Order History',
                           subtitle: 'View your past orders',
                           onTap: () {
-                            // TODO: Navigate to order history
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const OrdersScreen(),
+                              ),
+                            );
                           },
                         ),
                         _buildMenuItem(
@@ -145,7 +166,12 @@ class ProfileScreen extends StatelessWidget {
                           title: 'Notifications',
                           subtitle: 'Manage notification preferences',
                           onTap: () {
-                            // TODO: Navigate to notifications settings
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const NotificationsSettingsScreen(),
+                              ),
+                            );
                           },
                         ),
                         _buildMenuItem(
@@ -153,7 +179,12 @@ class ProfileScreen extends StatelessWidget {
                           title: 'Help & Support',
                           subtitle: 'Get help with your orders',
                           onTap: () {
-                            // TODO: Navigate to help
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const HelpSupportScreen(),
+                              ),
+                            );
                           },
                         ),
                         _buildMenuItem(
@@ -161,7 +192,12 @@ class ProfileScreen extends StatelessWidget {
                           title: 'About',
                           subtitle: 'App version and information',
                           onTap: () {
-                            // TODO: Navigate to about
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const AboutScreen(),
+                              ),
+                            );
                           },
                         ),
 

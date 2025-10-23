@@ -32,19 +32,49 @@ class _OrdersScreenState extends State<OrdersScreen> {
     });
 
     try {
+      print('🌐 GET ${ApiConfig.myOrders}');
+
       final response = await apiService.get(ApiConfig.myOrders);
+
+      print('📬 Response status: ${response.statusCode}');
+      print('📬 Response data: ${response.data}');
+
       if (response.statusCode == 200) {
-        final List<dynamic> data = response.data;
-        setState(() {
-          _orders = data.map((json) => Order.fromJson(json)).toList();
-          _isLoading = false;
-        });
+        final dynamic responseData = response.data;
+        List<dynamic> data;
+
+        // Handle different response formats
+        if (responseData is List) {
+          data = responseData;
+        } else if (responseData is Map<String, dynamic>) {
+          data = responseData['orders'] ?? responseData['data'] ?? [];
+        } else {
+          data = [];
+        }
+
+        if (mounted) {
+          setState(() {
+            _orders = data.map((json) => Order.fromJson(json)).toList();
+            _isLoading = false;
+          });
+          print('✅ Loaded ${_orders.length} orders');
+        }
+      } else {
+        throw Exception('Server returned ${response.statusCode}');
       }
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
+      print('❌ Error loading orders: $e');
+
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+          // Show empty orders instead of error on first load
+          if (_orders.isEmpty) {
+            _orders = [];
+          }
+        });
+      }
     }
   }
 
@@ -69,24 +99,54 @@ class _OrdersScreenState extends State<OrdersScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _error != null
+          : _error != null && _orders.isEmpty
               ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        size: 48,
-                        color: AppColors.error,
-                      ),
-                      const SizedBox(height: 16),
-                      const Text('Failed to load orders'),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _loadOrders,
-                        child: const Text('Retry'),
-                      ),
-                    ],
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.cloud_off_outlined,
+                          size: 80,
+                          color: AppColors.grey400,
+                        ),
+                        const SizedBox(height: 24),
+                        const Text(
+                          'Connection Issue',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Unable to load your orders right now. This might be a temporary server issue.',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: AppColors.textSecondary,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton.icon(
+                          onPressed: _loadOrders,
+                          icon: const Icon(Icons.refresh, color: AppColors.white),
+                          label: const Text(
+                            'Try Again',
+                            style: TextStyle(color: AppColors.white),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 )
               : _orders.isEmpty

@@ -30,7 +30,7 @@ class ProductCardShimmer extends StatelessWidget {
               baseColor: AppColors.grey200,
               highlightColor: AppColors.grey100,
               child: Container(
-                height: 130,
+                height: 120,
                 decoration: const BoxDecoration(
                   color: AppColors.grey200,
                   borderRadius: BorderRadius.vertical(
