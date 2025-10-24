@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import '../../config/app_colors.dart';
 import '../../config/api_config.dart';
 import '../../models/product_model.dart';
@@ -26,6 +27,7 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
   String? _selectedCategory;
   bool _isLoading = false;
   bool _hasSearched = false;
+  Timer? _debounceTimer;
 
   @override
   void initState() {
@@ -54,9 +56,32 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
     }
   }
 
+  void _onSearchChanged(String value) {
+    // Cancel previous timer
+    _debounceTimer?.cancel();
+
+    // Start new timer for debounced search
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      if (value.trim().isNotEmpty || _selectedCategory != null) {
+        _search();
+      } else {
+        setState(() {
+          _searchResults = [];
+          _hasSearched = false;
+        });
+      }
+    });
+  }
+
   Future<void> _search() async {
     final query = _searchController.text.trim();
-    if (query.isEmpty && _selectedCategory == null) return;
+    if (query.isEmpty && _selectedCategory == null) {
+      setState(() {
+        _searchResults = [];
+        _hasSearched = false;
+      });
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -158,6 +183,7 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
                     autofocus: widget.initialQuery == null,
                     decoration: InputDecoration(
                       hintText: 'Search for products...',
+                      hintStyle: const TextStyle(color: AppColors.grey400),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       prefixIcon: const Icon(Icons.search, color: AppColors.grey400),
@@ -168,7 +194,10 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
                             )
                           : null,
                     ),
-                    onChanged: (value) => setState(() {}),
+                    onChanged: (value) {
+                      setState(() {}); // Update UI for clear button
+                      _onSearchChanged(value); // Trigger debounced search
+                    },
                     onSubmitted: (_) => _search(),
                   ),
                 ),
@@ -355,6 +384,7 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
         setState(() {
           _selectedCategory = value;
         });
+        _search(); // Trigger search when category changes
       },
       child: Container(
         margin: const EdgeInsets.only(right: 8),
@@ -382,6 +412,7 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _debounceTimer?.cancel();
     super.dispose();
   }
 }

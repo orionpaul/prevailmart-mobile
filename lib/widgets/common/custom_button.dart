@@ -25,9 +25,9 @@ class CustomButton extends StatefulWidget {
     this.textColor,
     this.icon,
     this.width,
-    this.height = 56,
-    this.borderRadius = 12,
-    this.useGradient = true,
+    this.height = 52,
+    this.borderRadius = 30,
+    this.useGradient = false,
   });
 
   @override
@@ -102,16 +102,16 @@ class _CustomButtonState extends State<CustomButton> with SingleTickerProviderSt
                 ? Colors.transparent
                 : (widget.useGradient ? null : buttonColor),
             border: widget.isOutlined
-                ? Border.all(color: buttonColor, width: 2)
+                ? Border.all(color: buttonColor, width: 1.5)
                 : null,
             borderRadius: BorderRadius.circular(widget.borderRadius),
             boxShadow: widget.isOutlined || widget.isLoading
                 ? null
                 : [
                     BoxShadow(
-                      color: buttonColor.withOpacity(_isPressed ? 0.2 : 0.3),
-                      blurRadius: _isPressed ? 8 : 12,
-                      offset: Offset(0, _isPressed ? 2 : 4),
+                      color: buttonColor.withOpacity(_isPressed ? 0.08 : 0.12),
+                      blurRadius: _isPressed ? 4 : 6,
+                      offset: Offset(0, _isPressed ? 1 : 2),
                     ),
                   ],
           ),
@@ -147,9 +147,9 @@ class _CustomButtonState extends State<CustomButton> with SingleTickerProviderSt
             widget.text,
             style: TextStyle(
               fontSize: 16,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
               color: contentColor,
-              letterSpacing: 0.5,
+              letterSpacing: 0.3,
             ),
           ),
         ],
@@ -160,9 +160,9 @@ class _CustomButtonState extends State<CustomButton> with SingleTickerProviderSt
       widget.text,
       style: TextStyle(
         fontSize: 16,
-        fontWeight: FontWeight.w600,
+        fontWeight: FontWeight.w500,
         color: contentColor,
-        letterSpacing: 0.5,
+        letterSpacing: 0.3,
       ),
     );
   }

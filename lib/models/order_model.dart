@@ -1,5 +1,100 @@
 import 'cart_model.dart';
 
+/// Status History Entry
+class StatusHistoryEntry {
+  final String status;
+  final DateTime timestamp;
+  final String message;
+
+  StatusHistoryEntry({
+    required this.status,
+    required this.timestamp,
+    required this.message,
+  });
+
+  factory StatusHistoryEntry.fromJson(Map<String, dynamic> json) {
+    return StatusHistoryEntry(
+      status: json['status'] ?? '',
+      timestamp: json['timestamp'] != null
+          ? DateTime.parse(json['timestamp'])
+          : DateTime.now(),
+      message: json['message'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'status': status,
+      'timestamp': timestamp.toIso8601String(),
+      'message': message,
+    };
+  }
+}
+
+/// Driver Location
+class DriverLocation {
+  final double latitude;
+  final double longitude;
+
+  DriverLocation({
+    required this.latitude,
+    required this.longitude,
+  });
+
+  factory DriverLocation.fromJson(Map<String, dynamic> json) {
+    return DriverLocation(
+      latitude: (json['latitude'] ?? 0).toDouble(),
+      longitude: (json['longitude'] ?? 0).toDouble(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'latitude': latitude,
+      'longitude': longitude,
+    };
+  }
+}
+
+/// Driver Information
+class DriverInfo {
+  final String name;
+  final String phone;
+  final String vehicle;
+  final double rating;
+  final DriverLocation? currentLocation;
+
+  DriverInfo({
+    required this.name,
+    required this.phone,
+    required this.vehicle,
+    required this.rating,
+    this.currentLocation,
+  });
+
+  factory DriverInfo.fromJson(Map<String, dynamic> json) {
+    return DriverInfo(
+      name: json['name'] ?? '',
+      phone: json['phone'] ?? '',
+      vehicle: json['vehicle'] ?? '',
+      rating: (json['rating'] ?? 0).toDouble(),
+      currentLocation: json['currentLocation'] != null
+          ? DriverLocation.fromJson(json['currentLocation'])
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'phone': phone,
+      'vehicle': vehicle,
+      'rating': rating,
+      'currentLocation': currentLocation?.toJson(),
+    };
+  }
+}
+
 /// Order Model - Represents a customer order
 class Order {
   final String id;
@@ -14,6 +109,9 @@ class Order {
   final String? driverId;
   final String? driverName;
   final Map<String, dynamic>? location;
+  final List<StatusHistoryEntry>? statusHistory;
+  final DriverInfo? driver;
+  final DateTime? estimatedDeliveryTime;
 
   Order({
     required this.id,
@@ -28,6 +126,9 @@ class Order {
     this.driverId,
     this.driverName,
     this.location,
+    this.statusHistory,
+    this.driver,
+    this.estimatedDeliveryTime,
   });
 
   /// Create Order from JSON
@@ -35,6 +136,12 @@ class Order {
     final itemsList = json['items'] as List<dynamic>? ?? [];
     final items = itemsList
         .map((item) => CartItem.fromJson(item as Map<String, dynamic>))
+        .toList();
+
+    // Parse status history
+    final historyList = json['statusHistory'] as List<dynamic>? ?? [];
+    final statusHistory = historyList
+        .map((item) => StatusHistoryEntry.fromJson(item as Map<String, dynamic>))
         .toList();
 
     return Order(
@@ -54,6 +161,13 @@ class Order {
       driverId: json['driverId'],
       driverName: json['driverName'],
       location: json['location'],
+      statusHistory: statusHistory.isNotEmpty ? statusHistory : null,
+      driver: json['driver'] != null
+          ? DriverInfo.fromJson(json['driver'])
+          : null,
+      estimatedDeliveryTime: json['estimatedDeliveryTime'] != null
+          ? DateTime.parse(json['estimatedDeliveryTime'])
+          : null,
     );
   }
 
@@ -72,6 +186,9 @@ class Order {
       'driverId': driverId,
       'driverName': driverName,
       'location': location,
+      'statusHistory': statusHistory?.map((item) => item.toJson()).toList(),
+      'driver': driver?.toJson(),
+      'estimatedDeliveryTime': estimatedDeliveryTime?.toIso8601String(),
     };
   }
 

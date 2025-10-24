@@ -12,6 +12,7 @@ import 'cart_screen.dart';
 import 'products_screen.dart';
 import 'location_picker_screen.dart';
 import 'product_search_screen.dart';
+import 'customer_main_screen.dart';
 import '../../models/address_model.dart';
 import 'dart:async';
 
@@ -23,7 +24,10 @@ class HomeScreenNew extends StatefulWidget {
   State<HomeScreenNew> createState() => _HomeScreenNewState();
 }
 
-class _HomeScreenNewState extends State<HomeScreenNew> {
+class _HomeScreenNewState extends State<HomeScreenNew> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   List<Product> _products = [];
   List<String> _categories = [];
   String _selectedCategory = 'All';
@@ -112,6 +116,7 @@ class _HomeScreenNewState extends State<HomeScreenNew> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
     final cart = context.watch<CartProvider>();
 
     return Scaffold(
@@ -225,10 +230,8 @@ class _HomeScreenNewState extends State<HomeScreenNew> {
                       // Cart Button with Badge
                       GestureDetector(
                         onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const CartScreen()),
-                          );
+                          // Switch to Cart tab (index 1)
+                          CustomerMainScreen.switchTab(context, 1);
                         },
                         child: Container(
                           padding: const EdgeInsets.all(10),
@@ -392,13 +395,8 @@ class _HomeScreenNewState extends State<HomeScreenNew> {
                             const SizedBox(width: 12),
                             GestureDetector(
                               onTap: () {
-                                // Navigate to search screen with filter focus
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const ProductSearchScreen(),
-                                  ),
-                                );
+                                // Show filter bottom sheet
+                                _showFilterBottomSheet();
                               },
                               child: Container(
                                 padding: const EdgeInsets.all(12),
@@ -602,6 +600,138 @@ class _HomeScreenNewState extends State<HomeScreenNew> {
                 ),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showFilterBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      isScrollControlled: true,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Filter by Category',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close, color: AppColors.textSecondary),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Select a category to filter products',
+              style: TextStyle(
+                fontSize: 14,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Category Chips
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: _categories.map((category) {
+                final isSelected = _selectedCategory == category;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedCategory = category;
+                    });
+                    Navigator.pop(context);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isSelected ? AppColors.primary : AppColors.grey100,
+                      borderRadius: BorderRadius.circular(25),
+                      border: Border.all(
+                        color: isSelected ? AppColors.primary : AppColors.grey300,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _getCategoryIcon(category),
+                          color: isSelected ? AppColors.white : AppColors.textSecondary,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          category,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: isSelected ? AppColors.white : AppColors.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Reset Button
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () {
+                  setState(() {
+                    _selectedCategory = 'All';
+                  });
+                  Navigator.pop(context);
+                },
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  side: const BorderSide(
+                    color: AppColors.grey300,
+                    width: 1.5,
+                  ),
+                ),
+                child: const Text(
+                  'Reset Filter',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
           ],
         ),
       ),

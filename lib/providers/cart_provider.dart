@@ -134,7 +134,7 @@ class CartProvider with ChangeNotifier {
       for (final item in guestCart.items) {
         try {
           await apiService.post(
-            ApiConfig.cart,
+            '${ApiConfig.cart}/add',
             data: {
               'productId': item.productId,
               'quantity': item.quantity,
@@ -169,7 +169,7 @@ class CartProvider with ChangeNotifier {
 
         try {
           final response = await apiService.post(
-            ApiConfig.cart,
+            '${ApiConfig.cart}/add',
             data: {
               'productId': product.id,
               'quantity': quantity,
@@ -253,9 +253,12 @@ class CartProvider with ChangeNotifier {
 
       if (_isAuthenticated) {
         // Authenticated - update via API
-        final response = await apiService.put(
-          '${ApiConfig.cart}/$productId',
-          data: {'quantity': quantity},
+        final response = await apiService.patch(
+          '${ApiConfig.cart}/update',
+          data: {
+            'productId': productId,
+            'quantity': quantity,
+          },
         );
 
         if (response.statusCode == 200) {
@@ -313,7 +316,7 @@ class CartProvider with ChangeNotifier {
     try {
       if (_isAuthenticated) {
         // Authenticated - remove via API
-        final response = await apiService.delete('${ApiConfig.cart}/$productId');
+        final response = await apiService.delete('${ApiConfig.cart}/remove/$productId');
 
         if (response.statusCode == 200) {
           _cart = Cart.fromJson(response.data);
@@ -364,7 +367,7 @@ class CartProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await apiService.delete(ApiConfig.cart);
+      final response = await apiService.delete('${ApiConfig.cart}/clear');
 
       if (response.statusCode == 200) {
         _cart = Cart(items: [], total: 0.0);

@@ -22,11 +22,16 @@ class ApiService {
     // Add interceptors for logging and error handling
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
+        // Always reload token from storage to ensure it's fresh
+        _token = await storageService.getSecure(ApiConfig.tokenKey);
+
         // Add token to all requests if available
         if (_token != null) {
           options.headers['Authorization'] = 'Bearer $_token';
+          print('🌐 ${options.method} ${options.path} (🔑 Token: ${_token!.substring(0, 20)}...)');
+        } else {
+          print('🌐 ${options.method} ${options.path} (⚠️ No token)');
         }
-        print('🌐 ${options.method} ${options.path}');
         return handler.next(options);
       },
       onResponse: (response, handler) {
@@ -38,15 +43,6 @@ class ApiService {
         return handler.next(error);
       },
     ));
-
-    // Load token from storage
-    _loadToken();
-  }
-
-  /// Load token from secure storage
-  Future<void> _loadToken() async {
-    _token = await storageService.getSecure(ApiConfig.tokenKey);
-    print('🔑 Token loaded: ${_token != null ? "Yes" : "No"}');
   }
 
   /// Save token to secure storage

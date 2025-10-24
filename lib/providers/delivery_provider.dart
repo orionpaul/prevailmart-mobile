@@ -179,11 +179,39 @@ class DeliveryProvider with ChangeNotifier {
         .where((d) => d.status == 'delivered')
         .fold<double>(0, (sum, d) => sum + d.earnings);
 
+    // Calculate period-specific earnings
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final weekAgo = now.subtract(const Duration(days: 7));
+    final monthStart = DateTime(now.year, now.month, 1);
+
+    final todayEarnings = _deliveries
+        .where((d) => d.status == 'delivered' && d.deliveredAt != null)
+        .where((d) {
+          final date = DateTime(d.deliveredAt!.year, d.deliveredAt!.month, d.deliveredAt!.day);
+          return date == today;
+        })
+        .fold<double>(0, (sum, d) => sum + d.earnings);
+
+    final weekEarnings = _deliveries
+        .where((d) => d.status == 'delivered' && d.deliveredAt != null)
+        .where((d) => d.deliveredAt!.isAfter(weekAgo))
+        .fold<double>(0, (sum, d) => sum + d.earnings);
+
+    final monthEarnings = _deliveries
+        .where((d) => d.status == 'delivered' && d.deliveredAt != null)
+        .where((d) => d.deliveredAt!.isAfter(monthStart))
+        .fold<double>(0, (sum, d) => sum + d.earnings);
+
     return {
       'totalDeliveries': _deliveries.length,
       'completedDeliveries': completed,
       'activeDeliveries': _deliveries.where((d) => d.isActive).length,
       'totalEarnings': totalEarnings,
+      'todayEarnings': todayEarnings,
+      'weekEarnings': weekEarnings,
+      'monthEarnings': monthEarnings,
+      'rating': 5.0, // TODO: Add rating from backend
     };
   }
 }

@@ -31,10 +31,29 @@ class LocationService {
   Future<loc.LocationData?> getCurrentLocation() async {
     try {
       // Check if location services are enabled
-      bool serviceEnabled = await isLocationServiceEnabled();
+      bool serviceEnabled = false;
+      try {
+        serviceEnabled = await isLocationServiceEnabled().timeout(
+          const Duration(seconds: 5),
+          onTimeout: () => false,
+        );
+      } catch (e) {
+        print('⚠️ Error checking location service: $e');
+        return null;
+      }
+
       if (!serviceEnabled) {
         print('⚠️ Location services are disabled. Requesting...');
-        serviceEnabled = await requestService();
+        try {
+          serviceEnabled = await requestService().timeout(
+            const Duration(seconds: 5),
+            onTimeout: () => false,
+          );
+        } catch (e) {
+          print('⚠️ Error requesting location service: $e');
+          return null;
+        }
+
         if (!serviceEnabled) {
           print('⚠️ Location services still disabled');
           return null;
@@ -42,12 +61,31 @@ class LocationService {
       }
 
       // Check permission
-      loc.PermissionStatus permission = await checkPermission();
+      loc.PermissionStatus permission;
+      try {
+        permission = await checkPermission().timeout(
+          const Duration(seconds: 5),
+          onTimeout: () => loc.PermissionStatus.denied,
+        );
+      } catch (e) {
+        print('⚠️ Error checking permission: $e');
+        return null;
+      }
 
       if (permission == loc.PermissionStatus.denied) {
-        permission = await requestPermission();
+        print('🔐 Requesting location permission...');
+        try {
+          permission = await requestPermission().timeout(
+            const Duration(seconds: 30), // Give user time to respond
+            onTimeout: () => loc.PermissionStatus.denied,
+          );
+        } catch (e) {
+          print('⚠️ Error requesting permission: $e');
+          return null;
+        }
+
         if (permission != loc.PermissionStatus.granted) {
-          print('⚠️ Location permission denied');
+          print('⚠️ Location permission denied by user');
           return null;
         }
       }
@@ -58,12 +96,21 @@ class LocationService {
       }
 
       // Get current position
-      final locationData = await _location.getLocation();
+      try {
+        final locationData = await _location.getLocation().timeout(
+          const Duration(seconds: 10),
+          onTimeout: () => throw Exception('Location fetch timeout'),
+        );
 
-      print('✅ Current location: ${locationData.latitude}, ${locationData.longitude}');
-      return locationData;
-    } catch (e) {
-      print('❌ Error getting location: $e');
+        print('✅ Current location: ${locationData.latitude}, ${locationData.longitude}');
+        return locationData;
+      } catch (e) {
+        print('❌ Error getting location data: $e');
+        return null;
+      }
+    } catch (e, stackTrace) {
+      print('❌ Error in getCurrentLocation: $e');
+      print('Stack trace: $stackTrace');
       return null;
     }
   }

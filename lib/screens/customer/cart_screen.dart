@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:prevailmart/screens/customer/home_screen_new.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../config/app_colors.dart';
@@ -16,7 +17,10 @@ class CartScreen extends StatefulWidget {
   State<CartScreen> createState() => _CartScreenState();
 }
 
-class _CartScreenState extends State<CartScreen> {
+class _CartScreenState extends State<CartScreen> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   @override
   void initState() {
     super.initState();
@@ -34,6 +38,7 @@ class _CartScreenState extends State<CartScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
     final cart = context.watch<CartProvider>();
     final auth = context.watch<AuthProvider>();
 
@@ -42,17 +47,14 @@ class _CartScreenState extends State<CartScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         elevation: 0,
+        centerTitle: true,
         title: const Text(
           'Shopping Cart',
           style: TextStyle(
             color: AppColors.white,
-            fontWeight: FontWeight.bold,
           ),
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
+
         actions: [
           if (cart.isNotEmpty)
             TextButton(
@@ -280,16 +282,32 @@ class _CartScreenState extends State<CartScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const HomeScreenNew(),
+                ),
+              );
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               padding: const EdgeInsets.symmetric(
                 horizontal: 32,
-                vertical: 12,
+                vertical: 16,
+              ),
+              elevation: 2,
+            ),
+            icon: const Icon(Icons.shopping_bag, color: AppColors.white),
+            label: const Text(
+              'Start Shopping',
+              style: TextStyle(
+                color: AppColors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
               ),
             ),
-            child: const Text('Start Shopping'),
           ),
         ],
       ),

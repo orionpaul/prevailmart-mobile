@@ -220,4 +220,25 @@ class AuthProvider with ChangeNotifier {
       return false;
     }
   }
+
+  /// Refresh user data from server
+  Future<void> refreshUser() async {
+    print('🔄 Refreshing user data');
+
+    try {
+      final response = await apiService.get('${ApiConfig.users}/profile');
+
+      if (response.statusCode == 200) {
+        _user = User.fromJson(response.data);
+
+        // Update secure storage
+        await storageService.saveJson(ApiConfig.userKey, response.data);
+
+        print('✅ User data refreshed');
+        notifyListeners();
+      }
+    } catch (e) {
+      print('❌ Failed to refresh user: $e');
+    }
+  }
 }

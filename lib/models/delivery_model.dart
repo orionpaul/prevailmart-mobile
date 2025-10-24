@@ -99,9 +99,19 @@ class Delivery {
 
   /// Create Delivery from JSON
   factory Delivery.fromJson(Map<String, dynamic> json) {
+    // Backend uses 'orderId' field which gets populated with order data
+    // Check for 'orderId' first, then 'order', then fallback to json itself
+    var orderData = json['orderId'] ?? json['order'];
+
+    // If orderId/order is null or a string (not populated), use the whole json object
+    // This handles cases where the order isn't populated by the backend
+    if (orderData == null || orderData is String) {
+      orderData = json;
+    }
+
     return Delivery(
       id: json['_id'] ?? json['id'] ?? '',
-      order: Order.fromJson(json['order'] ?? json),
+      order: Order.fromJson(orderData as Map<String, dynamic>),
       status: json['status'] ?? 'pending',
       driverId: json['driverId'],
       assignedAt: json['assignedAt'] != null

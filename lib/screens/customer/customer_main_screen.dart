@@ -13,25 +13,70 @@ class CustomerMainScreen extends StatefulWidget {
 
   @override
   State<CustomerMainScreen> createState() => _CustomerMainScreenState();
+
+  /// Navigate to a specific tab from anywhere in the app
+  static void switchTab(BuildContext context, int tabIndex) {
+    final state = context.findAncestorStateOfType<_CustomerMainScreenState>();
+    state?.setState(() {
+      state._currentIndex = tabIndex;
+    });
+    // Pop all routes in the new tab's navigator to go back to root
+    state?._navigatorKeys[tabIndex].currentState?.popUntil((route) => route.isFirst);
+  }
 }
 
 class _CustomerMainScreenState extends State<CustomerMainScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = const [
-    HomeScreenNew(),
-    CartScreen(),
-    OrdersScreen(),
-    ProfileScreen(),
+  // Navigator keys for each tab to maintain separate navigation stacks
+  final List<GlobalKey<NavigatorState>> _navigatorKeys = [
+    GlobalKey<NavigatorState>(),
+    GlobalKey<NavigatorState>(),
+    GlobalKey<NavigatorState>(),
+    GlobalKey<NavigatorState>(),
   ];
+
+  // Build navigator for each tab
+  Widget _buildNavigator(int index, Widget child) {
+    return Navigator(
+      key: _navigatorKeys[index],
+      onGenerateRoute: (settings) {
+        return MaterialPageRoute(
+          builder: (context) => child,
+          settings: settings,
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
-      ),
+    return WillPopScope(
+      onWillPop: () async {
+        // Handle back button - pop from current tab's navigator
+        final isFirstRouteInCurrentTab =
+            !await _navigatorKeys[_currentIndex].currentState!.maybePop();
+
+        if (isFirstRouteInCurrentTab) {
+          // If we're on the first route, go to home tab or exit
+          if (_currentIndex != 0) {
+            setState(() => _currentIndex = 0);
+            return false;
+          }
+        }
+        return isFirstRouteInCurrentTab;
+      },
+      child: Scaffold(
+        resizeToAvoidBottomInset: false,
+        body: IndexedStack(
+          index: _currentIndex,
+          children: [
+            _buildNavigator(0, const HomeScreenNew()),
+            _buildNavigator(1, const CartScreen()),
+            _buildNavigator(2, const OrdersScreen()),
+            _buildNavigator(3, const ProfileScreen()),
+          ],
+        ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: AppColors.white,
@@ -44,9 +89,15 @@ class _CustomerMainScreenState extends State<CustomerMainScreen> {
           ],
         ),
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
+          top: false,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              minHeight: 65,
+              maxHeight: 85,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildNavItem(
@@ -75,9 +126,11 @@ class _CustomerMainScreenState extends State<CustomerMainScreen> {
                   index: 3,
                 ),
               ],
+              ),
             ),
           ),
         ),
+      ),
       ),
     );
   }

@@ -1,13 +1,16 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../config/app_colors.dart';
 import '../../models/delivery_model.dart';
 import '../../providers/delivery_provider.dart';
+import '../../services/location_service.dart';
 import '../../widgets/common/custom_button.dart';
 
-/// Active Delivery Screen - View delivery details and complete
-class ActiveDeliveryScreen extends StatelessWidget {
+/// Active Delivery Screen - View delivery details with live map tracking
+class ActiveDeliveryScreen extends StatefulWidget {
   final Delivery delivery;
 
   const ActiveDeliveryScreen({
@@ -15,8 +18,113 @@ class ActiveDeliveryScreen extends StatelessWidget {
     required this.delivery,
   });
 
+  @override
+  State<ActiveDeliveryScreen> createState() => _ActiveDeliveryScreenState();
+}
+
+class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
+  GoogleMapController? _mapController;
+  Timer? _locationTimer;
+  LatLng? _driverLocation;
+  LatLng? _customerLocation;
+  bool _isMapExpanded = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeMap();
+    _startLocationUpdates();
+  }
+
+  @override
+  void dispose() {
+    _locationTimer?.cancel();
+    _mapController?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _initializeMap() async {
+    try {
+      // Get driver's current location
+      final locationData = await locationService.getCurrentLocation();
+      if (locationData != null && locationData.latitude != null && locationData.longitude != null) {
+        if (mounted) {
+          setState(() {
+            _driverLocation = LatLng(locationData.latitude!, locationData.longitude!);
+          });
+        }
+      }
+
+      // Get customer location from delivery address
+      final deliveryAddress = widget.delivery.order.deliveryAddress;
+      if (deliveryAddress != null) {
+        final coords = await locationService.getCoordinatesFromAddress(deliveryAddress);
+        if (coords != null && mounted) {
+          setState(() {
+            _customerLocation = coords;
+          });
+
+          // Move camera to show both locations
+          if (_driverLocation != null && _customerLocation != null) {
+            _fitBounds();
+          }
+        }
+      }
+    } catch (e) {
+      print('Error initializing map: $e');
+    }
+  }
+
+  void _fitBounds() {
+    if (_mapController == null || _driverLocation == null || _customerLocation == null) return;
+
+    final bounds = LatLngBounds(
+      southwest: LatLng(
+        _driverLocation!.latitude < _customerLocation!.latitude
+            ? _driverLocation!.latitude
+            : _customerLocation!.latitude,
+        _driverLocation!.longitude < _customerLocation!.longitude
+            ? _driverLocation!.longitude
+            : _customerLocation!.longitude,
+      ),
+      northeast: LatLng(
+        _driverLocation!.latitude > _customerLocation!.latitude
+            ? _driverLocation!.latitude
+            : _customerLocation!.latitude,
+        _driverLocation!.longitude > _customerLocation!.longitude
+            ? _driverLocation!.longitude
+            : _customerLocation!.longitude,
+      ),
+    );
+
+    _mapController?.animateCamera(
+      CameraUpdate.newLatLngBounds(bounds, 100),
+    );
+  }
+
+  void _startLocationUpdates() {
+    // Update location every 10 seconds
+    _locationTimer = Timer.periodic(const Duration(seconds: 10), (timer) async {
+      final locationData = await locationService.getCurrentLocation();
+      if (locationData != null && locationData.latitude != null && locationData.longitude != null) {
+        if (mounted) {
+          setState(() {
+            _driverLocation = LatLng(locationData.latitude!, locationData.longitude!);
+          });
+
+          // Update backend with new location
+          context.read<DeliveryProvider>().updateLocation(
+                widget.delivery.id,
+                locationData.latitude!,
+                locationData.longitude!,
+              );
+        }
+      }
+    });
+  }
+
   Future<void> _callCustomer() async {
-    final phone = delivery.customerPhone ?? delivery.order.deliveryAddress;
+    final phone = widget.delivery.customerPhone ?? widget.delivery.order.deliveryAddress;
     if (phone != null) {
       final url = Uri.parse('tel:$phone');
       if (await canLaunchUrl(url)) {
@@ -26,7 +134,7 @@ class ActiveDeliveryScreen extends StatelessWidget {
   }
 
   Future<void> _openMaps() async {
-    final address = delivery.order.deliveryAddress ?? '';
+    final address = widget.delivery.order.deliveryAddress ?? '';
     final url = Uri.parse(
       'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(address)}',
     );
@@ -53,9 +161,70 @@ class ActiveDeliveryScreen extends StatelessWidget {
           icon: const Icon(Icons.arrow_back, color: AppColors.white),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          IconButton(
+            icon: Icon(
+              _isMapExpanded ? Icons.expand_less : Icons.expand_more,
+              color: AppColors.white,
+            ),
+            onPressed: () {
+              setState(() {
+                _isMapExpanded = !_isMapExpanded;
+              });
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [
+          // Live Map Section
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            height: _isMapExpanded ? 300 : 0,
+            child: _driverLocation != null
+                ? GoogleMap(
+                    initialCameraPosition: CameraPosition(
+                      target: _driverLocation!,
+                      zoom: 14,
+                    ),
+                    onMapCreated: (controller) {
+                      _mapController = controller;
+                      if (_customerLocation != null) {
+                        _fitBounds();
+                      }
+                    },
+                    markers: {
+                      if (_driverLocation != null)
+                        Marker(
+                          markerId: const MarkerId('driver'),
+                          position: _driverLocation!,
+                          icon: BitmapDescriptor.defaultMarkerWithHue(
+                            BitmapDescriptor.hueAzure,
+                          ),
+                          infoWindow: const InfoWindow(title: 'Your Location'),
+                        ),
+                      if (_customerLocation != null)
+                        Marker(
+                          markerId: const MarkerId('customer'),
+                          position: _customerLocation!,
+                          icon: BitmapDescriptor.defaultMarkerWithHue(
+                            BitmapDescriptor.hueRed,
+                          ),
+                          infoWindow: const InfoWindow(title: 'Delivery Address'),
+                        ),
+                    },
+                    myLocationEnabled: true,
+                    myLocationButtonEnabled: true,
+                    zoomControlsEnabled: false,
+                  )
+                : Container(
+                    color: AppColors.grey100,
+                    child: const Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  ),
+          ),
+
           Expanded(
             child: SingleChildScrollView(
               child: Column(
@@ -73,7 +242,7 @@ class ActiveDeliveryScreen extends StatelessWidget {
                     child: Column(
                       children: [
                         Icon(
-                          delivery.canComplete
+                          widget.delivery.canComplete
                               ? Icons.local_shipping
                               : Icons.check_circle_outline,
                           color: AppColors.white,
@@ -81,7 +250,7 @@ class ActiveDeliveryScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          delivery.statusDisplay,
+                          widget.delivery.statusDisplay,
                           style: const TextStyle(
                             color: AppColors.white,
                             fontSize: 20,
@@ -90,7 +259,7 @@ class ActiveDeliveryScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Order #${delivery.order.id.substring(delivery.order.id.length - 6).toUpperCase()}',
+                          'Order #${widget.delivery.order.id.substring(widget.delivery.order.id.length - 6).toUpperCase()}',
                           style: TextStyle(
                             color: AppColors.white.withOpacity(0.9),
                             fontSize: 14,
@@ -137,7 +306,7 @@ class ActiveDeliveryScreen extends StatelessWidget {
                       icon: Icons.location_on,
                       iconColor: AppColors.error,
                       title: 'Delivery Location',
-                      subtitle: delivery.order.deliveryAddress ?? 'No address',
+                      subtitle: widget.delivery.order.deliveryAddress ?? 'No address',
                     ),
                   ),
 
@@ -145,7 +314,7 @@ class ActiveDeliveryScreen extends StatelessWidget {
                     title: 'Order Items',
                     child: Column(
                       children: [
-                        ...delivery.order.items.map((item) {
+                        ...widget.delivery.order.items.map((item) {
                           return Container(
                             margin: const EdgeInsets.only(bottom: 12),
                             padding: const EdgeInsets.all(12),
@@ -219,17 +388,17 @@ class ActiveDeliveryScreen extends StatelessWidget {
                         children: [
                           _buildPaymentRow(
                             'Order Total',
-                            '\$${delivery.order.total.toStringAsFixed(2)}',
+                            '\$${widget.delivery.order.total.toStringAsFixed(2)}',
                           ),
                           const SizedBox(height: 8),
                           _buildPaymentRow(
                             'Payment Method',
-                            delivery.order.paymentMethod ?? 'Cash',
+                            widget.delivery.order.paymentMethod ?? 'Cash',
                           ),
                           const Divider(height: 24),
                           _buildPaymentRow(
                             'Your Earnings',
-                            '\$${delivery.earnings.toStringAsFixed(2)}',
+                            '\$${widget.delivery.earnings.toStringAsFixed(2)}',
                             isEarnings: true,
                           ),
                         ],
@@ -242,7 +411,7 @@ class ActiveDeliveryScreen extends StatelessWidget {
           ),
 
           // Complete Delivery Button
-          if (delivery.canComplete)
+          if (widget.delivery.canComplete)
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -287,7 +456,7 @@ class ActiveDeliveryScreen extends StatelessWidget {
                     if (confirm == true && context.mounted) {
                       final deliveryProvider = context.read<DeliveryProvider>();
                       final success = await deliveryProvider.completeDelivery(
-                        delivery.id,
+                        widget.delivery.id,
                       );
 
                       if (success && context.mounted) {

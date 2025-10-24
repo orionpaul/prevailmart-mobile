@@ -10,13 +10,17 @@ class ApiConfig {
   static const String register = '/auth/register';
   static const String profile = '/auth/profile';
 
+  // User Endpoints
+  static const String users = '/users';
+
   // Customer Endpoints
   static const String products = '/products';
   static const String featuredProducts = '/products/featured';
   static const String categories = '/categories';
   static const String cart = '/cart';
   static const String orders = '/orders';
-  static const String myOrders = '/orders/my-orders';
+  // Use base /orders endpoint - backend automatically filters by authenticated user
+  static const String myOrders = '/orders';
 
   // Driver Endpoints
   static const String deliveries = '/deliveries';

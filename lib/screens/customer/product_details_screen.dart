@@ -4,6 +4,7 @@ import '../../config/app_colors.dart';
 import '../../models/product_model.dart';
 import '../../providers/cart_provider.dart';
 import '../../widgets/common/custom_button.dart';
+import '../../widgets/product_reviews_widget.dart';
 
 /// Product Details Screen - Premium detailed view of a product
 class ProductDetailsScreen extends StatefulWidget {
@@ -280,6 +281,15 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                           ),
                         ],
                       ),
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    // Customer Reviews Section
+                    ProductReviewsWidget(
+                      productId: widget.product.id,
+                      averageRating: 4.5,
+                      totalReviews: 127,
                     ),
 
                     const SizedBox(height: 100),

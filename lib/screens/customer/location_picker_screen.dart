@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../config/app_colors.dart';
 import '../../services/location_service.dart';
 import '../../models/address_model.dart';
+import 'dart:io' show Platform;
 
 /// Location Picker Screen - Select delivery address on map
 class LocationPickerScreen extends StatefulWidget {
@@ -24,80 +26,155 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   bool _isLoading = true;
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _instructionsController = TextEditingController();
+  final TextEditingController _manualAddressController = TextEditingController();
   String _selectedLabel = 'Home';
+  bool _useManualAddress = false;
 
   @override
   void initState() {
     super.initState();
-    _initializeLocation();
+    // Delay initialization slightly on iOS to prevent crashes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _initializeLocation();
+      }
+    });
   }
 
   Future<void> _initializeLocation() async {
-    if (widget.initialAddress != null) {
-      // Use provided address
-      setState(() {
-        _selectedLocation = LatLng(
-          widget.initialAddress!.latitude,
-          widget.initialAddress!.longitude,
-        );
-        _address = widget.initialAddress!.fullAddress;
-        _selectedLabel = widget.initialAddress!.label;
-        _instructionsController.text = widget.initialAddress!.instructions ?? '';
-        _isLoading = false;
-      });
-    } else {
-      // Get current location
-      final locationData = await locationService.getCurrentLocation();
-
-      if (locationData != null && locationData.latitude != null && locationData.longitude != null) {
-        final latLng = LatLng(locationData.latitude!, locationData.longitude!);
-        setState(() {
-          _selectedLocation = latLng;
-        });
-
-        // Get address
-        final address = await locationService.getAddressFromCoordinates(
-          locationData.latitude!,
-          locationData.longitude!,
-        );
-
+    try {
+      if (widget.initialAddress != null) {
+        // Use provided address
         if (mounted) {
           setState(() {
-            _address = address ?? 'Unknown location';
+            _selectedLocation = LatLng(
+              widget.initialAddress!.latitude,
+              widget.initialAddress!.longitude,
+            );
+            _address = widget.initialAddress!.fullAddress;
+            _selectedLabel = widget.initialAddress!.label;
+            _instructionsController.text = widget.initialAddress!.instructions ?? '';
             _isLoading = false;
           });
-
-          // Move camera to current location
-          _mapController?.animateCamera(
-            CameraUpdate.newLatLngZoom(latLng, 15),
-          );
         }
-      } else {
-        // Default to a fallback location (e.g., city center)
-        setState(() {
-          _selectedLocation = const LatLng(6.5244, 3.3792); // Lagos, Nigeria
-          _address = 'Location access denied';
-          _isLoading = false;
-        });
+        return;
       }
+
+      // iOS-specific: Add delay to let permission dialog complete
+      final isIOS = Platform.isIOS || defaultTargetPlatform == TargetPlatform.iOS;
+      if (isIOS) {
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+
+      // Get current location with error handling
+      try {
+        // Request location with timeout
+        final locationData = await locationService.getCurrentLocation()
+            .timeout(
+          const Duration(seconds: 10),
+          onTimeout: () {
+            print('⏱️ Location request timeout');
+            return null;
+          },
+        );
+
+        if (locationData != null && locationData.latitude != null && locationData.longitude != null) {
+          final latLng = LatLng(locationData.latitude!, locationData.longitude!);
+          if (mounted) {
+            setState(() {
+              _selectedLocation = latLng;
+            });
+          }
+
+          // Get address with timeout
+          try {
+            final address = await locationService.getAddressFromCoordinates(
+              locationData.latitude!,
+              locationData.longitude!,
+            ).timeout(
+              const Duration(seconds: 5),
+              onTimeout: () {
+                print('⏱️ Geocoding timeout');
+                return 'Selected location';
+              },
+            );
+
+            if (mounted) {
+              setState(() {
+                _address = address ?? 'Unknown location';
+                _isLoading = false;
+              });
+
+              // Move camera to current location - wrap in try-catch for iOS
+              try {
+                await Future.delayed(const Duration(milliseconds: 300));
+                _mapController?.animateCamera(
+                  CameraUpdate.newLatLngZoom(latLng, 15),
+                );
+              } catch (cameraError) {
+                print('Camera animation error (non-critical): $cameraError');
+              }
+            }
+          } catch (addressError) {
+            print('Error fetching address: $addressError');
+            if (mounted) {
+              setState(() {
+                _address = 'Tap on map to select location';
+                _isLoading = false;
+              });
+            }
+          }
+        } else {
+          // Permission denied or location unavailable
+          _setDefaultLocation('Tap on map to select your delivery location');
+        }
+      } catch (locationError) {
+        print('Error getting location: $locationError');
+        _setDefaultLocation('Location unavailable. Tap on map to select.');
+      }
+    } catch (e, stackTrace) {
+      print('Error in _initializeLocation: $e');
+      print('Stack trace: $stackTrace');
+      _setDefaultLocation('Tap on map to select location');
+    }
+  }
+
+  void _setDefaultLocation(String message) {
+    if (mounted) {
+      setState(() {
+        _selectedLocation = const LatLng(6.5244, 3.3792); // Lagos, Nigeria
+        _address = message;
+        _isLoading = false;
+      });
     }
   }
 
   Future<void> _onMapTap(LatLng position) async {
+    if (!mounted) return;
+
     setState(() {
       _selectedLocation = position;
       _address = 'Fetching address...';
     });
 
-    final address = await locationService.getAddressFromCoordinates(
-      position.latitude,
-      position.longitude,
-    );
+    try {
+      final address = await locationService.getAddressFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
 
-    if (mounted) {
-      setState(() {
-        _address = address ?? 'Unknown location';
-      });
+      if (mounted) {
+        setState(() {
+          _address = address ?? 'Unknown location';
+        });
+      }
+    } catch (e) {
+      print('Error fetching address on map tap: $e');
+      if (mounted) {
+        setState(() {
+          _address = 'Selected location';
+        });
+      }
     }
   }
 
@@ -105,28 +182,42 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     final query = _searchController.text.trim();
     if (query.isEmpty) return;
 
+    if (!mounted) return;
     setState(() => _isLoading = true);
 
-    final coordinates = await locationService.getCoordinatesFromAddress(query);
+    try {
+      final coordinates = await locationService.getCoordinatesFromAddress(query);
 
-    if (coordinates != null && mounted) {
-      setState(() {
-        _selectedLocation = coordinates;
-        _isLoading = false;
-      });
+      if (coordinates != null && mounted) {
+        setState(() {
+          _selectedLocation = coordinates;
+          _isLoading = false;
+        });
 
-      _mapController?.animateCamera(
-        CameraUpdate.newLatLngZoom(coordinates, 15),
-      );
+        _mapController?.animateCamera(
+          CameraUpdate.newLatLngZoom(coordinates, 15),
+        );
 
-      // Update address
-      _onMapTap(coordinates);
-    } else {
-      setState(() => _isLoading = false);
+        // Update address
+        await _onMapTap(coordinates);
+      } else {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Address not found'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('Error searching address: $e');
       if (mounted) {
+        setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Address not found'),
+          SnackBar(
+            content: Text('Error searching address: ${e.toString()}'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -135,9 +226,15 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   }
 
   void _confirmLocation() {
+    // Use manual address if enabled and provided, otherwise use detected address
+    String finalAddress = _address;
+    if (_useManualAddress && _manualAddressController.text.trim().isNotEmpty) {
+      finalAddress = _manualAddressController.text.trim();
+    }
+
     final address = Address(
       label: _selectedLabel,
-      fullAddress: _address,
+      fullAddress: finalAddress,
       latitude: _selectedLocation.latitude,
       longitude: _selectedLocation.longitude,
       instructions: _instructionsController.text.trim().isEmpty
@@ -329,6 +426,65 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
                     const SizedBox(height: 24),
 
+                    // Manual Address Toggle
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Enter address manually',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        Switch(
+                          value: _useManualAddress,
+                          onChanged: (value) {
+                            setState(() {
+                              _useManualAddress = value;
+                              if (value && _manualAddressController.text.isEmpty) {
+                                // Pre-fill with detected address
+                                _manualAddressController.text = _address;
+                              }
+                            });
+                          },
+                          activeColor: AppColors.primary,
+                        ),
+                      ],
+                    ),
+
+                    if (_useManualAddress) ...[
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _manualAddressController,
+                        decoration: InputDecoration(
+                          hintText: 'Type your address here...',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: AppColors.grey300),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                          ),
+                          contentPadding: const EdgeInsets.all(16),
+                          prefixIcon: const Icon(Icons.edit_location_alt, color: AppColors.primary),
+                        ),
+                        maxLines: 2,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'You can edit the detected address or write your own',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.grey400,
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 24),
+
                     // Delivery Instructions
                     const Text(
                       'Delivery Instructions (Optional)',
@@ -443,6 +599,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   void dispose() {
     _searchController.dispose();
     _instructionsController.dispose();
+    _manualAddressController.dispose();
     _mapController?.dispose();
     super.dispose();
   }
