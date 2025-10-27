@@ -74,12 +74,12 @@ class DriverInfo {
 
   factory DriverInfo.fromJson(Map<String, dynamic> json) {
     return DriverInfo(
-      name: json['name'] ?? '',
-      phone: json['phone'] ?? '',
-      vehicle: json['vehicle'] ?? '',
+      name: json['name']?.toString() ?? '',
+      phone: json['phone']?.toString() ?? '',
+      vehicle: json['vehicle']?.toString() ?? '',
       rating: (json['rating'] ?? 0).toDouble(),
-      currentLocation: json['currentLocation'] != null
-          ? DriverLocation.fromJson(json['currentLocation'])
+      currentLocation: json['currentLocation'] != null && json['currentLocation'] is Map<String, dynamic>
+          ? DriverLocation.fromJson(json['currentLocation'] as Map<String, dynamic>)
           : null,
     );
   }
@@ -133,16 +133,35 @@ class Order {
 
   /// Create Order from JSON
   factory Order.fromJson(Map<String, dynamic> json) {
-    final itemsList = json['items'] as List<dynamic>? ?? [];
-    final items = itemsList
-        .map((item) => CartItem.fromJson(item as Map<String, dynamic>))
-        .toList();
+    // Safely parse items list
+    List<CartItem> items = [];
+    if (json['items'] != null && json['items'] is List) {
+      final itemsList = json['items'] as List;
+      items = itemsList
+          .map((item) {
+            if (item is Map<String, dynamic>) {
+              return CartItem.fromJson(item);
+            }
+            return null;
+          })
+          .whereType<CartItem>()
+          .toList();
+    }
 
     // Parse status history
-    final historyList = json['statusHistory'] as List<dynamic>? ?? [];
-    final statusHistory = historyList
-        .map((item) => StatusHistoryEntry.fromJson(item as Map<String, dynamic>))
-        .toList();
+    List<StatusHistoryEntry> statusHistory = [];
+    if (json['statusHistory'] != null && json['statusHistory'] is List) {
+      final historyList = json['statusHistory'] as List;
+      statusHistory = historyList
+          .map((item) {
+            if (item is Map<String, dynamic>) {
+              return StatusHistoryEntry.fromJson(item);
+            }
+            return null;
+          })
+          .whereType<StatusHistoryEntry>()
+          .toList();
+    }
 
     return Order(
       id: json['_id'] ?? json['id'] ?? '',
@@ -162,8 +181,8 @@ class Order {
       driverName: json['driverName'],
       location: json['location'],
       statusHistory: statusHistory.isNotEmpty ? statusHistory : null,
-      driver: json['driver'] != null
-          ? DriverInfo.fromJson(json['driver'])
+      driver: json['driver'] != null && json['driver'] is Map<String, dynamic>
+          ? DriverInfo.fromJson(json['driver'] as Map<String, dynamic>)
           : null,
       estimatedDeliveryTime: json['estimatedDeliveryTime'] != null
           ? DateTime.parse(json['estimatedDeliveryTime'])
