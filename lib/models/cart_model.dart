@@ -14,9 +14,22 @@ class CartItem {
 
   /// Create CartItem from JSON
   factory CartItem.fromJson(Map<String, dynamic> json) {
+    // Safely parse product
+    Map<String, dynamic> productData;
+    if (json['product'] != null && json['product'] is Map<String, dynamic>) {
+      productData = json['product'] as Map<String, dynamic>;
+    } else {
+      // Fallback to minimal product data
+      productData = {
+        '_id': json['productId'] ?? '',
+        'name': 'Unknown Product',
+        'price': 0.0,
+      };
+    }
+
     return CartItem(
-      productId: json['productId'] ?? json['product']?['_id'] ?? '',
-      product: Product.fromJson(json['product']),
+      productId: json['productId'] ?? productData['_id'] ?? '',
+      product: Product.fromJson(productData),
       quantity: json['quantity'] ?? 1,
     );
   }
@@ -48,10 +61,20 @@ class Cart {
 
   /// Create Cart from JSON
   factory Cart.fromJson(Map<String, dynamic> json) {
-    final itemsList = json['items'] as List<dynamic>? ?? [];
-    final items = itemsList
-        .map((item) => CartItem.fromJson(item as Map<String, dynamic>))
-        .toList();
+    // Safely parse items list
+    List<CartItem> items = [];
+    if (json['items'] != null && json['items'] is List) {
+      final itemsList = json['items'] as List;
+      items = itemsList
+          .map((item) {
+            if (item is Map<String, dynamic>) {
+              return CartItem.fromJson(item);
+            }
+            return null;
+          })
+          .whereType<CartItem>()
+          .toList();
+    }
 
     return Cart(
       id: json['_id'] ?? json['id'],
