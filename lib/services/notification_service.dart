@@ -1,329 +1,462 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
+import 'dart:io';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-// NOTE: Add these Firebase packages to pubspec.yaml:
-// firebase_core: ^2.24.0
-// firebase_messaging: ^14.7.6
-// flutter_local_notifications: ^16.3.0
-//
-// Uncomment imports below after adding packages:
-// import 'package:firebase_core/firebase_core.dart';
-// import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:permission_handler/permission_handler.dart';
+import '../models/notification_model.dart';
 
-/// Notification Service - Handles push notifications using Firebase Cloud Messaging
+/// Background message handler (must be top-level function)
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  print('Handling background message: ${message.messageId}');
+}
+
+/// Notification Service - Handles all notification operations
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();
 
-  // Uncomment after adding firebase_messaging package
-  // FirebaseMessaging? _messaging;
-
+  final FirebaseMessaging _fcm = FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
 
-  bool _isInitialized = false;
-  String? _fcmToken;
+  final StreamController<NotificationModel> _notificationStreamController =
+      StreamController<NotificationModel>.broadcast();
 
-  /// Get FCM token
-  String? get fcmToken => _fcmToken;
+  final List<NotificationModel> _notificationHistory = [];
+
+  /// Stream of incoming notifications
+  Stream<NotificationModel> get notificationStream =>
+      _notificationStreamController.stream;
+
+  /// Get notification history
+  List<NotificationModel> get notificationHistory => _notificationHistory;
+
+  /// Get unread count
+  int get unreadCount =>
+      _notificationHistory.where((n) => !n.isRead).length;
 
   /// Initialize notification service
   Future<void> initialize() async {
-    if (_isInitialized) return;
-
     try {
+      // Initialize Firebase
+      await Firebase.initializeApp();
+
+      // Request permissions
+      await requestPermissions();
+
       // Initialize local notifications
       await _initializeLocalNotifications();
 
-      // TODO: Uncomment after adding Firebase packages
-      // await _initializeFirebaseMessaging();
+      // Configure FCM
+      await _configureFCM();
 
-      _isInitialized = true;
-      print('✅ Notification service initialized');
+      print('✅ Notification service initialized successfully');
     } catch (e) {
-      print('❌ Error initializing notifications: $e');
+      print('❌ Error initializing notification service: $e');
+    }
+  }
+
+  /// Request notification permissions
+  Future<bool> requestPermissions() async {
+    try {
+      // Request FCM permission
+      final fcmStatus = await _fcm.requestPermission(
+        alert: true,
+        announcement: false,
+        badge: true,
+        carPlay: false,
+        criticalAlert: false,
+        provisional: false,
+        sound: true,
+      );
+
+      if (fcmStatus.authorizationStatus != AuthorizationStatus.authorized) {
+        print('⚠️ FCM permission not granted');
+        return false;
+      }
+
+      // Request notification permission (iOS)
+      if (Platform.isIOS) {
+        final status = await Permission.notification.request();
+        if (!status.isGranted) {
+          print('⚠️ iOS notification permission not granted');
+          return false;
+        }
+      }
+
+      print('✅ Notification permissions granted');
+      return true;
+    } catch (e) {
+      print('❌ Error requesting permissions: $e');
+      return false;
     }
   }
 
   /// Initialize local notifications
   Future<void> _initializeLocalNotifications() async {
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const iosSettings = DarwinInitializationSettings(
+
+    final iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
     );
 
-    const initSettings = InitializationSettings(
+    final initSettings = InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
     );
 
     await _localNotifications.initialize(
       initSettings,
-      onDidReceiveNotificationResponse: _onNotificationTapped,
+      onDidReceiveNotificationResponse: (details) {
+        _handleNotificationTap(details.payload);
+      },
     );
+
+    // Create notification channels for Android
+    await _createNotificationChannels();
   }
 
-  /// Initialize Firebase Cloud Messaging
-  /// TODO: Uncomment after adding firebase_messaging package
-  /*
-  Future<void> _initializeFirebaseMessaging() async {
-    // Initialize Firebase if not already initialized
-    await Firebase.initializeApp();
+  /// Create Android notification channels
+  Future<void> _createNotificationChannels() async {
+    if (!Platform.isAndroid) return;
 
-    _messaging = FirebaseMessaging.instance;
+    final channels = [
+      const AndroidNotificationChannel(
+        'order_updates',
+        'Order Updates',
+        description: 'Notifications about your order status',
+        importance: Importance.high,
+        playSound: true,
+        enableVibration: true,
+      ),
+      const AndroidNotificationChannel(
+        'delivery_updates',
+        'Delivery Updates',
+        description: 'Real-time delivery tracking notifications',
+        importance: Importance.max,
+        playSound: true,
+        enableVibration: true,
+        enableLights: true,
+      ),
+      const AndroidNotificationChannel(
+        'promotional',
+        'Promotions',
+        description: 'Special offers and deals',
+        importance: Importance.low,
+        playSound: false,
+      ),
+    ];
 
-    // Request permissions (iOS)
-    NotificationSettings settings = await _messaging!.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-      provisional: false,
-    );
-
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      print('✅ Notification permissions granted');
-    } else {
-      print('⚠️ Notification permissions denied');
-      return;
+    for (var channel in channels) {
+      await _localNotifications
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.createNotificationChannel(channel);
     }
+  }
+
+  /// Configure Firebase Cloud Messaging
+  Future<void> _configureFCM() async {
+    // Set background message handler
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
     // Get FCM token
-    _fcmToken = await _messaging!.getToken();
-    print('📱 FCM Token: $_fcmToken');
+    final token = await _fcm.getToken();
+    print('📱 FCM Token: $token');
 
     // Listen for token refresh
-    _messaging!.onTokenRefresh.listen((newToken) {
-      _fcmToken = newToken;
-      print('🔄 FCM Token refreshed: $newToken');
-      // TODO: Send updated token to backend
+    _fcm.onTokenRefresh.listen((newToken) {
+      print('📱 FCM Token refreshed: $newToken');
+      // TODO: Send token to backend
     });
 
     // Handle foreground messages
-    FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      print('📩 Foreground message received: ${message.notification?.title}');
+      _handleForegroundMessage(message);
+    });
 
-    // Handle background message tap
-    FirebaseMessaging.onMessageOpenedApp.listen(_handleBackgroundMessageTap);
+    // Handle notification taps (app opened from notification)
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      print('📱 App opened from notification');
+      _handleNotificationTap(message.data.toString());
+    });
 
-    // Check if app was opened from terminated state
-    RemoteMessage? initialMessage = await _messaging!.getInitialMessage();
+    // Check if app was opened from a terminated state via notification
+    final initialMessage = await _fcm.getInitialMessage();
     if (initialMessage != null) {
-      _handleBackgroundMessageTap(initialMessage);
+      print('📱 App opened from terminated state via notification');
+      _handleNotificationTap(initialMessage.data.toString());
     }
   }
-  */
 
   /// Handle foreground messages
-  /// TODO: Uncomment after adding firebase_messaging package
-  /*
   void _handleForegroundMessage(RemoteMessage message) {
-    print('📨 Foreground message received: ${message.messageId}');
+    final notification = _createNotificationFromFCM(message);
 
-    final notification = message.notification;
+    // Add to history
+    _notificationHistory.insert(0, notification);
+
+    // Emit to stream
+    _notificationStreamController.add(notification);
+
+    // Show local notification
+    _showLocalNotification(notification);
+  }
+
+  /// Create notification model from FCM message
+  NotificationModel _createNotificationFromFCM(RemoteMessage message) {
     final data = message.data;
 
-    if (notification != null) {
-      _showLocalNotification(
-        title: notification.title ?? 'PrevailMart',
-        body: notification.body ?? '',
-        payload: data['orderId'],
-      );
-    }
+    return NotificationModel(
+      id: message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      title: message.notification?.title ?? data['title'] ?? 'New Notification',
+      body: message.notification?.body ?? data['body'] ?? '',
+      type: NotificationModel.parseNotificationType(data['type']),
+      priority: NotificationModel.parsePriority(data['priority']),
+      timestamp: DateTime.now(),
+      data: data,
+      orderId: data['orderId'],
+      trackingNumber: data['trackingNumber'],
+      imageUrl: message.notification?.android?.imageUrl ?? data['imageUrl'],
+    );
   }
-  */
-
-  /// Handle background message tap
-  /// TODO: Uncomment after adding firebase_messaging package
-  /*
-  void _handleBackgroundMessageTap(RemoteMessage message) {
-    print('📱 Background message tapped: ${message.messageId}');
-
-    final data = message.data;
-    if (data['orderId'] != null) {
-      // Navigate to order tracking
-      // TODO: Implement navigation using NavigatorKey
-    }
-  }
-  */
 
   /// Show local notification
-  Future<void> _showLocalNotification({
-    required String title,
-    required String body,
-    String? payload,
-  }) async {
-    const androidDetails = AndroidNotificationDetails(
-      'order_updates',
-      'Order Updates',
-      channelDescription: 'Notifications for order status updates',
-      importance: Importance.high,
-      priority: Priority.high,
-      showWhen: true,
+  Future<void> _showLocalNotification(NotificationModel notification) async {
+    final channelId = _getChannelIdForType(notification.type);
+
+    final androidDetails = AndroidNotificationDetails(
+      channelId,
+      _getChannelNameForType(notification.type),
+      channelDescription: 'Notification channel for ${notification.type}',
+      importance: notification.priority == NotificationPriority.urgent
+          ? Importance.max
+          : notification.priority == NotificationPriority.high
+              ? Importance.high
+              : Importance.defaultImportance,
+      priority: notification.priority == NotificationPriority.urgent
+          ? Priority.max
+          : notification.priority == NotificationPriority.high
+              ? Priority.high
+              : Priority.defaultPriority,
+      playSound: notification.shouldPlaySound,
+      enableVibration: notification.shouldVibrate,
       icon: '@mipmap/ic_launcher',
+      largeIcon: notification.imageUrl != null
+          ? DrawableResourceAndroidBitmap('@mipmap/ic_launcher')
+          : null,
     );
 
-    const iosDetails = DarwinNotificationDetails(
+    final iosDetails = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
-      presentSound: true,
+      presentSound: notification.shouldPlaySound,
+      sound: notification.shouldPlaySound ? 'default' : null,
     );
 
-    const notificationDetails = NotificationDetails(
+    final details = NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
     );
 
     await _localNotifications.show(
-      DateTime.now().millisecond,
-      title,
-      body,
-      notificationDetails,
-      payload: payload,
+      notification.id.hashCode,
+      notification.title,
+      notification.body,
+      details,
+      payload: notification.toJson().toString(),
     );
   }
 
-  /// Handle notification tap
-  void _onNotificationTapped(NotificationResponse response) {
-    print('🔔 Notification tapped: ${response.payload}');
+  /// Get channel ID for notification type
+  String _getChannelIdForType(NotificationType type) {
+    switch (type) {
+      case NotificationType.orderConfirmed:
+      case NotificationType.orderStatusUpdate:
+      case NotificationType.orderCancelled:
+        return 'order_updates';
+      case NotificationType.driverAssigned:
+      case NotificationType.orderPickedUp:
+      case NotificationType.driverNearby:
+      case NotificationType.orderDelivered:
+        return 'delivery_updates';
+      case NotificationType.promotional:
+        return 'promotional';
+      default:
+        return 'order_updates';
+    }
+  }
 
-    final payload = response.payload;
-    if (payload != null) {
-      // Navigate to appropriate screen based on payload
-      // TODO: Implement navigation using NavigatorKey
+  /// Get channel name for notification type
+  String _getChannelNameForType(NotificationType type) {
+    switch (type) {
+      case NotificationType.orderConfirmed:
+      case NotificationType.orderStatusUpdate:
+      case NotificationType.orderCancelled:
+        return 'Order Updates';
+      case NotificationType.driverAssigned:
+      case NotificationType.orderPickedUp:
+      case NotificationType.driverNearby:
+      case NotificationType.orderDelivered:
+        return 'Delivery Updates';
+      case NotificationType.promotional:
+        return 'Promotions';
+      default:
+        return 'General';
+    }
+  }
+
+  /// Handle notification tap
+  void _handleNotificationTap(String? payload) {
+    if (payload == null) return;
+
+    try {
+      // TODO: Navigate to appropriate screen based on payload
+      print('Notification tapped: $payload');
+    } catch (e) {
+      print('Error handling notification tap: $e');
     }
   }
 
   /// Show order status notification
-  Future<void> notifyOrderStatusChange({
+  Future<void> showOrderNotification({
     required String orderId,
-    required String orderNumber,
+    required String trackingNumber,
     required String status,
-    required String message,
+    String? driverName,
+    String? estimatedTime,
   }) async {
-    final statusEmojis = {
-      'pending': '⏳',
-      'processing': '⚙️',
-      'confirmed': '✅',
-      'preparing': '📦',
-      'shipped': '🚚',
-      'out-for-delivery': '🚀',
-      'delivered': '✨',
-      'cancelled': '❌',
-    };
+    NotificationType type;
+    String title;
+    String body;
+    NotificationPriority priority;
 
-    final emoji = statusEmojis[status.toLowerCase()] ?? '📬';
-
-    await _showLocalNotification(
-      title: '$emoji Order #$orderNumber',
-      body: message,
-      payload: orderId,
-    );
-  }
-
-  /// Show driver assigned notification
-  Future<void> notifyDriverAssigned({
-    required String orderId,
-    required String orderNumber,
-    required String driverName,
-  }) async {
-    await _showLocalNotification(
-      title: '🚗 Driver Assigned',
-      body: '$driverName is delivering your order #$orderNumber',
-      payload: orderId,
-    );
-  }
-
-  /// Show delivery arriving notification
-  Future<void> notifyDeliveryArriving({
-    required String orderId,
-    required String orderNumber,
-    required int minutes,
-  }) async {
-    await _showLocalNotification(
-      title: '⏰ Delivery Arriving Soon',
-      body: 'Your order #$orderNumber will arrive in approximately $minutes minutes',
-      payload: orderId,
-    );
-  }
-
-  /// Show order delivered notification
-  Future<void> notifyOrderDelivered({
-    required String orderId,
-    required String orderNumber,
-  }) async {
-    await _showLocalNotification(
-      title: '✅ Order Delivered',
-      body: 'Your order #$orderNumber has been delivered successfully!',
-      payload: orderId,
-    );
-  }
-
-  /// Show promotional notification
-  Future<void> notifyPromotion({
-    required String title,
-    required String message,
-  }) async {
-    await _showLocalNotification(
-      title: '🎉 $title',
-      body: message,
-      payload: null,
-    );
-  }
-
-  /// Request permission (mainly for iOS)
-  Future<bool> requestPermission() async {
-    // TODO: Uncomment after adding firebase_messaging package
-    /*
-    if (_messaging == null) {
-      await initialize();
+    switch (status.toLowerCase()) {
+      case 'confirmed':
+        type = NotificationType.orderConfirmed;
+        title = 'Order Confirmed!';
+        body = 'Your order #$trackingNumber has been confirmed and is being prepared.';
+        priority = NotificationPriority.medium;
+        break;
+      case 'assigned':
+        type = NotificationType.driverAssigned;
+        title = 'Driver Assigned!';
+        body = driverName != null
+            ? '$driverName is assigned to deliver your order.'
+            : 'A driver has been assigned to your order.';
+        priority = NotificationPriority.high;
+        break;
+      case 'picked_up':
+        type = NotificationType.orderPickedUp;
+        title = 'Order Picked Up!';
+        body = estimatedTime != null
+            ? 'Your order is on the way! Estimated arrival: $estimatedTime'
+            : 'Your order is on the way!';
+        priority = NotificationPriority.high;
+        break;
+      case 'delivered':
+        type = NotificationType.orderDelivered;
+        title = 'Order Delivered!';
+        body = 'Your order has been successfully delivered. Enjoy!';
+        priority = NotificationPriority.high;
+        break;
+      case 'cancelled':
+        type = NotificationType.orderCancelled;
+        title = 'Order Cancelled';
+        body = 'Your order #$trackingNumber has been cancelled.';
+        priority = NotificationPriority.medium;
+        break;
+      default:
+        type = NotificationType.orderStatusUpdate;
+        title = 'Order Update';
+        body = 'Your order status has been updated to: $status';
+        priority = NotificationPriority.low;
     }
 
-    final settings = await _messaging!.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
+    final notification = NotificationModel(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      title: title,
+      body: body,
+      type: type,
+      priority: priority,
+      timestamp: DateTime.now(),
+      orderId: orderId,
+      trackingNumber: trackingNumber,
     );
 
-    return settings.authorizationStatus == AuthorizationStatus.authorized;
-    */
+    // Add to history
+    _notificationHistory.insert(0, notification);
 
-    // Placeholder for now
-    return true;
+    // Emit to stream
+    _notificationStreamController.add(notification);
+
+    // Show notification
+    await _showLocalNotification(notification);
   }
 
-  /// Subscribe to topic
-  Future<void> subscribeToTopic(String topic) async {
-    // TODO: Uncomment after adding firebase_messaging package
-    /*
-    await _messaging?.subscribeToTopic(topic);
-    print('📢 Subscribed to topic: $topic');
-    */
+  /// Show driver nearby notification
+  Future<void> showDriverNearbyNotification({
+    required String orderId,
+    required String trackingNumber,
+    required String driverName,
+    String? estimatedMinutes,
+  }) async {
+    final notification = NotificationModel(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      title: 'Driver Nearby!',
+      body: estimatedMinutes != null
+          ? '$driverName is $estimatedMinutes away from your location.'
+          : '$driverName is approaching your delivery location.',
+      type: NotificationType.driverNearby,
+      priority: NotificationPriority.urgent,
+      timestamp: DateTime.now(),
+      orderId: orderId,
+      trackingNumber: trackingNumber,
+    );
+
+    _notificationHistory.insert(0, notification);
+    _notificationStreamController.add(notification);
+    await _showLocalNotification(notification);
   }
 
-  /// Unsubscribe from topic
-  Future<void> unsubscribeFromTopic(String topic) async {
-    // TODO: Uncomment after adding firebase_messaging package
-    /*
-    await _messaging?.unsubscribeFromTopic(topic);
-    print('🔕 Unsubscribed from topic: $topic');
-    */
+  /// Mark notification as read
+  void markAsRead(String notificationId) {
+    final index = _notificationHistory.indexWhere((n) => n.id == notificationId);
+    if (index != -1) {
+      _notificationHistory[index] = _notificationHistory[index].copyWith(isRead: true);
+    }
+  }
+
+  /// Mark all notifications as read
+  void markAllAsRead() {
+    for (var i = 0; i < _notificationHistory.length; i++) {
+      _notificationHistory[i] = _notificationHistory[i].copyWith(isRead: true);
+    }
+  }
+
+  /// Clear all notifications
+  void clearAll() {
+    _notificationHistory.clear();
+    _localNotifications.cancelAll();
+  }
+
+  /// Get FCM token
+  Future<String?> getFCMToken() async {
+    return await _fcm.getToken();
+  }
+
+  /// Dispose
+  void dispose() {
+    _notificationStreamController.close();
   }
 }
 
 /// Singleton instance
 final notificationService = NotificationService();
-
-/// Background message handler
-/// Must be a top-level function
-/// TODO: Uncomment after adding firebase_messaging package
-/*
-@pragma('vm:entry-point')
-Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
-  print('📨 Background message: ${message.messageId}');
-
-  // Handle the message
-  // Note: Can't show UI here, but can update local storage, etc.
-}
-*/

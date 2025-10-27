@@ -3,7 +3,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import '../config/app_colors.dart';
 
-/// Elegant minimalist splash screen
+/// Ultra Premium Splash Screen with Advanced Animations
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -13,13 +13,15 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
-  late AnimationController _fadeController;
-  late AnimationController _pulseController;
-  late AnimationController _shimmerController;
+  late AnimationController _logoController;
+  late AnimationController _glowController;
+  late AnimationController _rotateController;
+  late AnimationController _particleController;
 
-  late Animation<double> _fadeAnimation;
-  late Animation<double> _scaleAnimation;
-  late Animation<double> _shimmerAnimation;
+  late Animation<double> _logoFadeAnimation;
+  late Animation<double> _logoScaleAnimation;
+  late Animation<double> _glowAnimation;
+  late Animation<double> _rotateAnimation;
 
   @override
   void initState() {
@@ -29,53 +31,58 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _initializeAnimations() {
-    // Fade and scale animation for logo
-    _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
+    // Logo entrance - dramatic scale and fade
+    _logoController = AnimationController(
+      duration: const Duration(milliseconds: 2000),
       vsync: this,
     );
 
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeOut,
-    ));
+    _logoFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _logoController,
+        curve: const Interval(0.0, 0.5, curve: Curves.easeOut),
+      ),
+    );
 
-    _scaleAnimation = Tween<double>(
-      begin: 0.8,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeOutBack,
-    ));
+    _logoScaleAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _logoController,
+        curve: Curves.elasticOut,
+      ),
+    );
 
-    // Gentle pulse animation
-    _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 2000),
+    // Continuous glow pulse
+    _glowController = AnimationController(
+      duration: const Duration(milliseconds: 2500),
       vsync: this,
     )..repeat(reverse: true);
 
-    // Subtle shimmer effect
-    _shimmerController = AnimationController(
-      duration: const Duration(milliseconds: 3000),
+    _glowAnimation = Tween<double>(begin: 0.4, end: 1.0).animate(
+      CurvedAnimation(parent: _glowController, curve: Curves.easeInOut),
+    );
+
+    // Elegant rotation
+    _rotateController = AnimationController(
+      duration: const Duration(milliseconds: 2000),
+      vsync: this,
+    );
+
+    _rotateAnimation = Tween<double>(begin: -0.1, end: 0.0).animate(
+      CurvedAnimation(parent: _rotateController, curve: Curves.easeOutCubic),
+    );
+
+    // Animated particles
+    _particleController = AnimationController(
+      duration: const Duration(seconds: 20),
       vsync: this,
     )..repeat();
-
-    _shimmerAnimation = Tween<double>(
-      begin: -1.0,
-      end: 2.0,
-    ).animate(CurvedAnimation(
-      parent: _shimmerController,
-      curve: Curves.easeInOut,
-    ));
   }
 
   void _startAnimationSequence() async {
-    // Start fade in
-    await Future.delayed(const Duration(milliseconds: 300));
-    _fadeController.forward();
+    // Start logo animation
+    await Future.delayed(const Duration(milliseconds: 100));
+    _logoController.forward();
+    _rotateController.forward();
 
     // Navigate to main app
     await Future.delayed(const Duration(milliseconds: 2500));
@@ -86,211 +93,112 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   void dispose() {
-    _fadeController.dispose();
-    _pulseController.dispose();
-    _shimmerController.dispose();
+    _logoController.dispose();
+    _glowController.dispose();
+    _rotateController.dispose();
+    _particleController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFFF8FAFC),
-              AppColors.white,
-              Color(0xFFF1F5F9),
-            ],
+      backgroundColor: AppColors.white,
+      body: Stack(
+        children: [
+          // Light blur background with subtle gradient
+          Container(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment.center,
+                radius: 1.2,
+                colors: [
+                  AppColors.white,
+                  AppColors.primary.withOpacity(0.02),
+                  AppColors.white,
+                ],
+              ),
+            ),
           ),
-        ),
-        child: Stack(
-          children: [
-            // Subtle animated gradient circles
-            Positioned.fill(
-              child: AnimatedBuilder(
-                animation: _shimmerController,
-                builder: (context, child) {
-                  return CustomPaint(
-                    painter: GradientCirclesPainter(_shimmerAnimation.value),
-                  );
-                },
-              ),
-            ),
 
-            // Main content
-            Center(
-              child: AnimatedBuilder(
-                animation: _fadeController,
-                builder: (context, child) {
-                  return FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: Transform.scale(
-                      scale: _scaleAnimation.value,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          // Logo with elegant animation
-                          AnimatedBuilder(
-                            animation: _pulseController,
-                            builder: (context, child) {
-                              final pulse = 1.0 + (_pulseController.value * 0.05);
-                              return Transform.scale(
-                                scale: pulse,
-                                child: Container(
-                                  width: 140,
-                                  height: 140,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: AppColors.white,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: AppColors.primary.withOpacity(0.2),
-                                        blurRadius: 30,
-                                        spreadRadius: 5,
-                                      ),
-                                    ],
-                                  ),
-                                  padding: const EdgeInsets.all(20),
-                                  child: Image.asset(
-                                    'assets/logo/logo.png',
-                                    fit: BoxFit.contain,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
+          // Subtle floating particles
+          AnimatedBuilder(
+            animation: _particleController,
+            builder: (context, child) {
+              return CustomPaint(
+                size: Size(MediaQuery.of(context).size.width, MediaQuery.of(context).size.height),
+                painter: ParticlePainter(
+                  animation: _particleController.value,
+                  color: AppColors.primary.withOpacity(0.05),
+                ),
+              );
+            },
+          ),
 
-                          const SizedBox(height: 32),
-
-                          // App name with shimmer
-                          ShaderMask(
-                            shaderCallback: (bounds) {
-                              return LinearGradient(
-                                colors: const [
-                                  AppColors.primary,
-                                  AppColors.secondary,
-                                  AppColors.primary,
-                                ],
-                              ).createShader(bounds);
-                            },
-                            child: const Text(
-                              'PrevailMart',
-                              style: TextStyle(
-                                fontSize: 32,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.white,
-                                letterSpacing: 1.5,
-                              ),
+          // Main content - Logo only
+          Center(
+            child: AnimatedBuilder(
+              animation: Listenable.merge([_logoController, _glowController, _rotateController]),
+              builder: (context, child) {
+                return Opacity(
+                  opacity: _logoFadeAnimation.value,
+                  child: Transform.scale(
+                    scale: _logoScaleAnimation.value,
+                    child: Transform.rotate(
+                      angle: _rotateAnimation.value,
+                      child: Container(
+                        width: 220,
+                        height: 220,
+                        decoration: BoxDecoration(
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primary.withOpacity(0.15 * _glowAnimation.value),
+                              blurRadius: 40 * _glowAnimation.value,
+                              spreadRadius: 10 * _glowAnimation.value,
                             ),
-                          ),
-
-                          const SizedBox(height: 12),
-
-                          // Tagline
-                          Text(
-                            'Shop & Deliver in One App',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.textSecondary.withOpacity(0.8),
-                              letterSpacing: 1.2,
-                            ),
-                          ),
-
-                          const SizedBox(height: 60),
-
-                          // Minimal loading indicator
-                          SizedBox(
-                            width: 40,
-                            height: 40,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                AppColors.primary.withOpacity(0.3),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-
-            // Version at bottom
-            Positioned(
-              bottom: 40,
-              left: 0,
-              right: 0,
-              child: AnimatedBuilder(
-                animation: _fadeController,
-                builder: (context, child) {
-                  return FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: Center(
-                      child: Text(
-                        'Version 1.0.0',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textSecondary.withOpacity(0.4),
-                          letterSpacing: 1.5,
-                          fontWeight: FontWeight.w400,
+                          ],
+                        ),
+                        child: Image.asset(
+                          'assets/logo/logo.png',
+                          fit: BoxFit.contain,
                         ),
                       ),
                     ),
-                  );
-                },
-              ),
+                  ),
+                );
+              },
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
-// Custom painter for subtle background circles
-class GradientCirclesPainter extends CustomPainter {
-  final double animationValue;
+// Particle Painter for subtle floating particles
+class ParticlePainter extends CustomPainter {
+  final double animation;
+  final Color color;
 
-  GradientCirclesPainter(this.animationValue);
+  ParticlePainter({required this.animation, required this.color});
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..style = PaintingStyle.fill;
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
 
-    // Top-right circle
-    paint.color = AppColors.primary.withOpacity(0.03);
-    canvas.drawCircle(
-      Offset(size.width * 0.8, size.height * 0.2),
-      100 + (animationValue * 20),
-      paint,
-    );
+    // Create 30 subtle particles
+    for (int i = 0; i < 30; i++) {
+      final random = math.Random(i);
+      final x = size.width * random.nextDouble();
+      final y = (size.height * random.nextDouble() + animation * size.height * 0.3) % size.height;
+      final radius = 1.5 + random.nextDouble() * 2.5;
 
-    // Bottom-left circle
-    paint.color = AppColors.secondary.withOpacity(0.04);
-    canvas.drawCircle(
-      Offset(size.width * 0.2, size.height * 0.8),
-      120 + (animationValue * 15),
-      paint,
-    );
-
-    // Center circle
-    paint.color = AppColors.primary.withOpacity(0.02);
-    canvas.drawCircle(
-      Offset(size.width * 0.5, size.height * 0.5),
-      150 + (animationValue * 10),
-      paint,
-    );
+      canvas.drawCircle(Offset(x, y), radius, paint);
+    }
   }
 
   @override
-  bool shouldRepaint(GradientCirclesPainter oldDelegate) {
-    return oldDelegate.animationValue != animationValue;
-  }
+  bool shouldRepaint(ParticlePainter oldDelegate) => true;
 }

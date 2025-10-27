@@ -2,58 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import '../config/app_colors.dart';
-
-/// Review Model
-class Review {
-  final String id;
-  final String userName;
-  final double rating;
-  final String comment;
-  final DateTime createdAt;
-  final bool isVerifiedPurchase;
-  final int helpfulCount;
-  final List<String>? images;
-
-  Review({
-    required this.id,
-    required this.userName,
-    required this.rating,
-    required this.comment,
-    required this.createdAt,
-    this.isVerifiedPurchase = false,
-    this.helpfulCount = 0,
-    this.images,
-  });
-
-  factory Review.fromJson(Map<String, dynamic> json) {
-    return Review(
-      id: json['_id'] ?? json['id'] ?? '',
-      userName: json['userName'] ?? 'Anonymous',
-      rating: (json['rating'] ?? 0).toDouble(),
-      comment: json['comment'] ?? '',
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'])
-          : DateTime.now(),
-      isVerifiedPurchase: json['isVerifiedPurchase'] ?? false,
-      helpfulCount: json['helpfulCount'] ?? 0,
-      images: json['images'] != null
-          ? List<String>.from(json['images'])
-          : null,
-    );
-  }
-}
+import '../models/review_model.dart';
+import '../services/review_service.dart';
 
 /// Product Reviews Widget
 class ProductReviewsWidget extends StatefulWidget {
   final String productId;
-  final double averageRating;
-  final int totalReviews;
 
   const ProductReviewsWidget({
     super.key,
     required this.productId,
-    this.averageRating = 0.0,
-    this.totalReviews = 0,
   });
 
   @override
@@ -62,11 +20,13 @@ class ProductReviewsWidget extends StatefulWidget {
 
 class _ProductReviewsWidgetState extends State<ProductReviewsWidget> {
   List<Review> _reviews = [];
+  RatingStats? _ratingStats;
   bool _isLoading = false;
   String _sortBy = 'recent'; // recent, helpful, rating
   bool _showWriteReview = false;
   double _userRating = 5.0;
   final _reviewController = TextEditingController();
+  String? _error;
 
   @override
   void initState() {
@@ -81,46 +41,31 @@ class _ProductReviewsWidgetState extends State<ProductReviewsWidget> {
   }
 
   Future<void> _loadReviews() async {
-    // TODO: Implement API call to load reviews
-    // For now, using mock data
     setState(() {
       _isLoading = true;
+      _error = null;
     });
 
-    await Future.delayed(const Duration(seconds: 1));
+    try {
+      final reviews = await reviewService.getProductReviews(
+        productId: widget.productId,
+        page: 1,
+        limit: 10,
+      );
 
-    setState(() {
-      _reviews = [
-        Review(
-          id: '1',
-          userName: 'John Doe',
-          rating: 5.0,
-          comment: 'Excellent product! Very fresh and delivered quickly.',
-          createdAt: DateTime.now().subtract(const Duration(days: 2)),
-          isVerifiedPurchase: true,
-          helpfulCount: 12,
-        ),
-        Review(
-          id: '2',
-          userName: 'Jane Smith',
-          rating: 4.0,
-          comment: 'Good quality, but packaging could be better.',
-          createdAt: DateTime.now().subtract(const Duration(days: 5)),
-          isVerifiedPurchase: true,
-          helpfulCount: 8,
-        ),
-        Review(
-          id: '3',
-          userName: 'Mike Johnson',
-          rating: 5.0,
-          comment: 'Amazing! Will definitely buy again.',
-          createdAt: DateTime.now().subtract(const Duration(days: 10)),
-          isVerifiedPurchase: false,
-          helpfulCount: 3,
-        ),
-      ];
-      _isLoading = false;
-    });
+      final stats = await reviewService.getProductRatingStats(widget.productId);
+
+      setState(() {
+        _reviews = reviews;
+        _ratingStats = stats;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
   }
 
   void _sortReviews(String sortBy) {
@@ -141,43 +86,57 @@ class _ProductReviewsWidgetState extends State<ProductReviewsWidget> {
   }
 
   Future<void> _submitReview() async {
-    if (_reviewController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please write a review'),
-          backgroundColor: AppColors.error,
-        ),
+    try {
+      await reviewService.createReview(
+        productId: widget.productId,
+        rating: _userRating.toInt(),
+        comment: _reviewController.text.trim().isNotEmpty
+            ? _reviewController.text.trim()
+            : null,
       );
-      return;
+
+      setState(() {
+        _showWriteReview = false;
+        _reviewController.clear();
+        _userRating = 5.0;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Review submitted successfully!'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+
+      // Reload reviews to show the new one
+      _loadReviews();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to submit review: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     }
+  }
 
-    // TODO: Implement API call to submit review
-    // For now, just add to local list
-    setState(() {
-      _reviews.insert(
-        0,
-        Review(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          userName: 'You',
-          rating: _userRating,
-          comment: _reviewController.text,
-          createdAt: DateTime.now(),
-          isVerifiedPurchase: true,
-          helpfulCount: 0,
-        ),
-      );
-      _showWriteReview = false;
-      _reviewController.clear();
-      _userRating = 5.0;
-    });
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Review submitted successfully!'),
-          backgroundColor: AppColors.success,
-        ),
-      );
+  Future<void> _markHelpful(String reviewId) async {
+    try {
+      await reviewService.markReviewHelpful(reviewId);
+      _loadReviews(); // Reload to get updated helpful count
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to mark review as helpful: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     }
   }
 
@@ -291,13 +250,11 @@ class _ProductReviewsWidgetState extends State<ProductReviewsWidget> {
   }
 
   Widget _buildRatingSummary() {
-    final ratingDistribution = {
-      5: 65,
-      4: 20,
-      3: 10,
-      2: 3,
-      1: 2,
-    };
+    if (_ratingStats == null) {
+      return const SizedBox.shrink();
+    }
+
+    final stats = _ratingStats!;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -311,7 +268,7 @@ class _ProductReviewsWidgetState extends State<ProductReviewsWidget> {
           Column(
             children: [
               Text(
-                widget.averageRating.toStringAsFixed(1),
+                stats.averageRating.toStringAsFixed(1),
                 style: const TextStyle(
                   fontSize: 48,
                   fontWeight: FontWeight.bold,
@@ -319,7 +276,7 @@ class _ProductReviewsWidgetState extends State<ProductReviewsWidget> {
                 ),
               ),
               RatingBar.builder(
-                initialRating: widget.averageRating,
+                initialRating: stats.averageRating,
                 minRating: 1,
                 direction: Axis.horizontal,
                 allowHalfRating: true,
@@ -334,7 +291,7 @@ class _ProductReviewsWidgetState extends State<ProductReviewsWidget> {
               ),
               const SizedBox(height: 4),
               Text(
-                '${widget.totalReviews} reviews',
+                '${stats.totalReviews} ${stats.totalReviews == 1 ? "review" : "reviews"}',
                 style: const TextStyle(
                   fontSize: 12,
                   color: AppColors.textSecondary,
@@ -346,13 +303,17 @@ class _ProductReviewsWidgetState extends State<ProductReviewsWidget> {
           // Rating Distribution
           Expanded(
             child: Column(
-              children: ratingDistribution.entries.map((entry) {
+              children: [5, 4, 3, 2, 1].map((stars) {
+                final count = stats.ratingDistribution[stars] ?? 0;
+                final percentage = stats.totalReviews > 0
+                    ? (count / stats.totalReviews * 100).round()
+                    : 0;
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 6),
                   child: Row(
                     children: [
                       Text(
-                        '${entry.key}',
+                        '$stars',
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -366,7 +327,7 @@ class _ProductReviewsWidgetState extends State<ProductReviewsWidget> {
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(4),
                           child: LinearProgressIndicator(
-                            value: entry.value / 100,
+                            value: percentage / 100,
                             minHeight: 6,
                             backgroundColor: AppColors.grey300,
                             valueColor: const AlwaysStoppedAnimation<Color>(
@@ -376,7 +337,7 @@ class _ProductReviewsWidgetState extends State<ProductReviewsWidget> {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        '${entry.value}%',
+                        '$percentage%',
                         style: const TextStyle(
                           fontSize: 11,
                           color: AppColors.textSecondary,
@@ -525,7 +486,9 @@ class _ProductReviewsWidgetState extends State<ProductReviewsWidget> {
                 radius: 20,
                 backgroundColor: AppColors.primary.withOpacity(0.1),
                 child: Text(
-                  review.userName[0].toUpperCase(),
+                  review.user.name.isNotEmpty
+                      ? review.user.name[0].toUpperCase()
+                      : '?',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -541,7 +504,7 @@ class _ProductReviewsWidgetState extends State<ProductReviewsWidget> {
                     Row(
                       children: [
                         Text(
-                          review.userName,
+                          review.user.name,
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
@@ -586,7 +549,7 @@ class _ProductReviewsWidgetState extends State<ProductReviewsWidget> {
                     Row(
                       children: [
                         RatingBar.builder(
-                          initialRating: review.rating,
+                          initialRating: review.rating.toDouble(),
                           minRating: 1,
                           direction: Axis.horizontal,
                           allowHalfRating: true,
@@ -614,22 +577,22 @@ class _ProductReviewsWidgetState extends State<ProductReviewsWidget> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
           // Review Text
-          Text(
-            review.comment,
-            style: const TextStyle(
-              fontSize: 14,
-              height: 1.5,
-              color: AppColors.textPrimary,
+          if (review.comment != null && review.comment!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              review.comment!,
+              style: const TextStyle(
+                fontSize: 14,
+                height: 1.5,
+                color: AppColors.textPrimary,
+              ),
             ),
-          ),
+          ],
           const SizedBox(height: 12),
           // Helpful Button
           InkWell(
-            onTap: () {
-              // TODO: Implement helpful vote
-            },
+            onTap: () => _markHelpful(review.id),
             child: Row(
               children: [
                 Icon(

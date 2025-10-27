@@ -71,10 +71,10 @@ class _CustomerMainScreenState extends State<CustomerMainScreen> {
         body: IndexedStack(
           index: _currentIndex,
           children: [
-            _buildNavigator(0, const HomeScreenNew()),
-            _buildNavigator(1, const CartScreen()),
-            _buildNavigator(2, const OrdersScreen()),
-            _buildNavigator(3, const ProfileScreen()),
+            _buildNavigator(0, const HomeScreenNew(key: PageStorageKey('home'))),
+            _buildNavigator(1, const CartScreen(key: PageStorageKey('cart'))),
+            _buildNavigator(2, const OrdersScreen(key: PageStorageKey('orders'))),
+            _buildNavigator(3, const ProfileScreen(key: PageStorageKey('profile'))),
           ],
         ),
       bottomNavigationBar: Container(

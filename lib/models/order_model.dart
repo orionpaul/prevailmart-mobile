@@ -214,9 +214,10 @@ class Order {
 
   /// Check if order is active (can be tracked)
   bool get isActive =>
-      status != 'delivered' && status != 'cancelled';
+      status.toLowerCase() != 'delivered' && status.toLowerCase() != 'cancelled';
 
-  /// Check if order can be tracked in real-time
+  /// Check if order can be tracked
+  /// Available for all active orders (pending, confirmed, assigned, picked_up, in_transit)
   bool get canTrack =>
-      status == 'assigned' || status == 'picked_up';
+      isActive && trackingNumber != null && trackingNumber!.isNotEmpty;
 }
