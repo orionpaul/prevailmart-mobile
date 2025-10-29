@@ -288,6 +288,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                     // Customer Reviews Section
                     ProductReviewsWidget(
                       productId: widget.product.id,
+                      averageRating: 4.5,
+                      totalReviews: 127,
                     ),
 
                     const SizedBox(height: 100),

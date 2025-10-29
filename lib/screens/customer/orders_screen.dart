@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:prevailmart/screens/customer/home_screen_new.dart';
 import '../../config/app_colors.dart';
 import '../../config/api_config.dart';
 import '../../models/order_model.dart';
 import '../../services/api_service.dart';
+import 'customer_main_screen.dart';
 import 'track_order_screen.dart';
 import 'order_details_screen.dart';
 
@@ -83,6 +83,135 @@ class _OrdersScreenState extends State<OrdersScreen> with AutomaticKeepAliveClie
     }
   }
 
+  Future<void> _deleteOrder(Order order) async {
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Order'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.warning, color: AppColors.error),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Warning: This action cannot be undone.',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.error,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Text('Are you sure you want to delete this order?'),
+            const SizedBox(height: 8),
+            Text(
+              'Order #${order.id.substring(order.id.length - 6).toUpperCase()}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: AppColors.white,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      // Show loading indicator
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
+                  ),
+                ),
+                SizedBox(width: 12),
+                Text('Deleting order...'),
+              ],
+            ),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+
+      print('🗑️ DELETE ${ApiConfig.orders}/${order.id}');
+      final response = await apiService.delete('${ApiConfig.orders}/${order.id}');
+
+      print('📬 Response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.check_circle, color: AppColors.white),
+                  SizedBox(width: 12),
+                  Text('Order deleted successfully'),
+                ],
+              ),
+              backgroundColor: AppColors.success,
+              duration: Duration(seconds: 2),
+            ),
+          );
+
+          // Reload orders
+          _loadOrders();
+        }
+      } else {
+        throw Exception('Server returned ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Error deleting order: $e');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: AppColors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    e.toString().replaceAll('Exception: ', ''),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context); // Required for AutomaticKeepAliveClientMixin
@@ -100,12 +229,15 @@ class _OrdersScreenState extends State<OrdersScreen> with AutomaticKeepAliveClie
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.white),
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const HomeScreenNew(),
-            ),
-          )
+          onPressed: () {
+            // Use Navigator.pop() to properly go back instead of pushing a new screen
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else {
+              // If can't pop, switch to home tab
+              CustomerMainScreen.switchTab(context, 0);
+            }
+          },
         ),
       ),
       body: _isLoading
@@ -219,297 +351,17 @@ class _OrdersScreenState extends State<OrdersScreen> with AutomaticKeepAliveClie
     );
   }
 
-  void _showOrderOptions(Order order) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Handle bar
-              Container(
-                margin: const EdgeInsets.only(top: 12, bottom: 20),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.grey300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-
-              // Order info header
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  children: [
-                    Text(
-                      'Order #${order.id.substring(order.id.length - 6).toUpperCase()}',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      DateFormat('MMM dd, yyyy · HH:mm').format(order.createdAt),
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Action options
-              _buildActionOption(
-              icon: Icons.receipt_long_outlined,
-              title: 'View Order Details',
-              subtitle: 'See full order information',
-              onTap: () {
-                Navigator.pop(context);
-                _viewOrderDetails(order);
-              },
-            ),
-
-            if (order.canTrack)
-              _buildActionOption(
-                icon: Icons.location_on_outlined,
-                title: 'Track Order',
-                subtitle: 'See real-time delivery status',
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => TrackOrderScreen(
-                        trackingNumber: order.trackingNumber!,
-                      ),
-                    ),
-                  );
-                },
-              ),
-
-            if (order.status.toLowerCase() == 'pending' ||
-                order.status.toLowerCase() == 'confirmed')
-              _buildActionOption(
-                icon: Icons.cancel_outlined,
-                title: 'Cancel Order',
-                subtitle: 'Request order cancellation',
-                iconColor: AppColors.error,
-                onTap: () {
-                  Navigator.pop(context);
-                  _cancelOrder(order);
-                },
-              ),
-
-            if (order.status.toLowerCase() == 'delivered')
-              _buildActionOption(
-                icon: Icons.star_outline,
-                title: 'Leave a Review',
-                subtitle: 'Rate your experience',
-                onTap: () {
-                  Navigator.pop(context);
-                  _leaveReview(order);
-                },
-              ),
-
-            _buildActionOption(
-              icon: Icons.refresh,
-              title: 'Reorder Items',
-              subtitle: 'Add these items to cart again',
-              onTap: () {
-                Navigator.pop(context);
-                _reorderItems(order);
-              },
-            ),
-
-            _buildActionOption(
-              icon: Icons.download_outlined,
-              title: 'Download Receipt',
-              subtitle: 'Get a copy of your receipt',
-              onTap: () {
-                Navigator.pop(context);
-                _downloadReceipt(order);
-              },
-            ),
-
-            _buildActionOption(
-              icon: Icons.support_agent_outlined,
-              title: 'Contact Support',
-              subtitle: 'Get help with this order',
-              onTap: () {
-                Navigator.pop(context);
-                _contactSupport(order);
-              },
-            ),
-
-            const SizedBox(height: 20),
-          ],
-        ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionOption({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-    Color? iconColor,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: (iconColor ?? AppColors.primary).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                icon,
-                color: iconColor ?? AppColors.primary,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(
-              Icons.arrow_forward_ios,
-              size: 16,
-              color: AppColors.grey400,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _viewOrderDetails(Order order) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => OrderDetailsScreen(order: order),
-      ),
-    );
-  }
-
-  void _cancelOrder(Order order) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Cancel Order?'),
-        content: const Text('Are you sure you want to cancel this order? This action cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Keep Order'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // TODO: Call cancel order API
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Order cancellation requested'),
-                  backgroundColor: AppColors.warning,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
-            child: const Text('Cancel Order', style: TextStyle(color: AppColors.error)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _leaveReview(Order order) {
-    // TODO: Navigate to review screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Opening review form...'),
-        backgroundColor: AppColors.info,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  void _reorderItems(Order order) {
-    // TODO: Add all items to cart
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Adding ${order.items.length} items to cart...'),
-        backgroundColor: AppColors.success,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  void _downloadReceipt(Order order) {
-    // TODO: Generate and download PDF receipt
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Receipt downloaded'),
-        backgroundColor: AppColors.success,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  void _contactSupport(Order order) {
-    // TODO: Open support chat or email
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Opening support chat...'),
-        backgroundColor: AppColors.info,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
   Widget _buildOrderCard(Order order) {
-    return InkWell(
-      onTap: () => _showOrderOptions(order),
-      borderRadius: BorderRadius.circular(12),
+    return GestureDetector(
+      onTap: () {
+        // Navigate to order details screen
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => OrderDetailsScreen(order: order),
+          ),
+        );
+      },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
@@ -518,8 +370,8 @@ class _OrdersScreenState extends State<OrdersScreen> with AutomaticKeepAliveClie
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withOpacity(0.05),
-              blurRadius: 8,
+              color: AppColors.grey300.withOpacity(0.3),
+              blurRadius: 4,
               offset: const Offset(0, 2),
             ),
           ],
@@ -527,146 +379,170 @@ class _OrdersScreenState extends State<OrdersScreen> with AutomaticKeepAliveClie
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Order Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Order #${order.id.substring(order.id.length - 6).toUpperCase()}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                _buildStatusBadge(order.status),
-              ],
-            ),
-
-            const SizedBox(height: 8),
-
-            // Order Date
-            Row(
-              children: [
-                const Icon(
-                  Icons.calendar_today,
-                  size: 14,
-                  color: AppColors.textSecondary,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  DateFormat('MMM dd, yyyy · HH:mm').format(order.createdAt),
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-
-            const Divider(height: 24),
-
-            // Order Items Summary
-            ...order.items.take(2).map((item) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  children: [
-                    Text(
-                      '${item.quantity}x',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        item.product.name,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: AppColors.textPrimary,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Text(
-                      '\$${item.subtotal.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
-
-            if (order.items.length > 2)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text(
-                  '+ ${order.items.length - 2} more items',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textSecondary,
-                    fontStyle: FontStyle.italic,
-                  ),
+          // Order Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Order #${order.id.substring(order.id.length - 6).toUpperCase()}',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
                 ),
               ),
+              _buildStatusBadge(order.status),
+            ],
+          ),
 
-            const Divider(height: 24),
+          const SizedBox(height: 8),
 
-            // Total and View More indicator
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Total',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppColors.textSecondary,
-                      ),
+          // Order Date
+          Row(
+            children: [
+              const Icon(
+                Icons.calendar_today,
+                size: 14,
+                color: AppColors.textSecondary,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                DateFormat('MMM dd, yyyy · HH:mm').format(order.createdAt),
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+
+          const Divider(height: 24),
+
+          // Order Items Summary
+          ...order.items.take(2).map((item) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  Text(
+                    '${item.quantity}x',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textSecondary,
                     ),
-                    Text(
-                      '\$${order.total.toStringAsFixed(2)}',
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      item.product.name,
                       style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
+                        fontSize: 14,
+                        color: AppColors.textPrimary,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ],
-                ),
+                  ),
+                  Text(
+                    '\$${item.subtotal.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
 
-                // Tap to view more indicator
-                Row(
-                  children: [
-                    Text(
-                      'View Options',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppColors.primary.withOpacity(0.8),
-                        fontWeight: FontWeight.w600,
+          if (order.items.length > 2)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                '+ ${order.items.length - 2} more items',
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+
+          const Divider(height: 24),
+
+          // Total and Actions
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Total',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  Text(
+                    '\$${order.total.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+
+              // Action Buttons
+              Row(
+                children: [
+                  // Track Order Button
+                  if (order.canTrack && order.trackingNumber != null)
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => TrackOrderScreen(
+                              trackingNumber: order.trackingNumber!,
+                            ),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.secondary,
+                        foregroundColor: AppColors.white,
+                      ),
+                      icon: const Icon(Icons.location_on, size: 18),
+                      label: const Text('Track'),
+                    ),
+
+                  // Delete Button (only for cancelled or delivered orders)
+                  if (order.status.toLowerCase() == 'cancelled' ||
+                      order.status.toLowerCase() == 'delivered')
+                    Padding(
+                      padding: EdgeInsets.only(
+                        left: (order.canTrack && order.trackingNumber != null) ? 8 : 0,
+                      ),
+                      child: IconButton(
+                        onPressed: () => _deleteOrder(order),
+                        icon: const Icon(Icons.delete_outline),
+                        color: AppColors.error,
+                        tooltip: 'Delete Order',
+                        style: IconButton.styleFrom(
+                          backgroundColor: AppColors.error.withOpacity(0.1),
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 4),
-                    Icon(
-                      Icons.arrow_forward_ios,
-                      size: 14,
-                      color: AppColors.primary.withOpacity(0.8),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
+        ],
         ),
       ),
     );

@@ -34,25 +34,8 @@ class Product {
 
     // Handle image - prioritize 'image' field, fallback to first item in 'images'
     String? imageValue = json['image'];
-    List<String>? imagesList;
-
-    // Safely parse images array
-    if (json['images'] != null && json['images'] is List) {
-      try {
-        final List imageList = json['images'] as List;
-        imagesList = imageList
-            .map((e) => e?.toString() ?? '')
-            .where((e) => e.isNotEmpty)
-            .toList();
-
-        // If no image value yet, use first image from list
-        if (imageValue == null && imagesList.isNotEmpty) {
-          imageValue = imagesList[0];
-        }
-      } catch (e) {
-        print('Error parsing images: $e');
-        imagesList = null;
-      }
+    if (imageValue == null && json['images'] != null && json['images'] is List && (json['images'] as List).isNotEmpty) {
+      imageValue = json['images'][0];
     }
 
     return Product(
@@ -64,7 +47,9 @@ class Product {
       stock: json['stock'] ?? 0,
       isFeatured: json['isFeatured'] ?? false,
       brand: json['brand'],
-      images: imagesList,
+      images: json['images'] != null
+          ? List<String>.from(json['images'])
+          : null,
     );
   }
 

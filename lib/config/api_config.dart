@@ -1,9 +1,48 @@
+import 'dart:io' show Platform;
+
 /// API Configuration - Customer & Driver Mobile App
 /// Note: Admin/SuperAdmin features are on the website dashboard only
 class ApiConfig {
-  // Base URL
-  static const String baseUrl = 'https://backend-prevailmart.onrender.com/api';
-  static const String socketUrl = 'https://backend-prevailmart.onrender.com';
+  // Environment configuration
+  static const bool isProduction = true; // Set to true for production builds
+
+  // Local development configuration
+  // Change this to your computer's IP address when using a physical device
+  static const String localIpAddress = '192.168.1.100'; // Update with your IP
+
+  // Automatically detect platform and configure URLs
+  static String get baseUrl {
+    if (isProduction) {
+      return 'https://backend-prevailmart.onrender.com/api';
+    }
+
+    // Local development URLs
+    if (Platform.isAndroid) {
+      // Android Emulator uses 10.0.2.2 to access host machine's localhost
+      return 'http://10.0.2.2:3025/api';
+    } else if (Platform.isIOS) {
+      // iOS Simulator can use localhost directly
+      return 'http://127.0.0.1:3025/api';
+    } else {
+      // Fallback for physical devices or other platforms
+      return 'http://$localIpAddress:3025/api';
+    }
+  }
+
+  static String get socketUrl {
+    if (isProduction) {
+      return 'https://backend-prevailmart.onrender.com';
+    }
+
+    // Local development URLs
+    if (Platform.isAndroid) {
+      return 'http://10.0.2.2:3025';
+    } else if (Platform.isIOS) {
+      return 'http://127.0.0.1:3025';
+    } else {
+      return 'http://$localIpAddress:3025';
+    }
+  }
 
   // Auth Endpoints
   static const String login = '/auth/login';

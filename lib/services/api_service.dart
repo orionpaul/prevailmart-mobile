@@ -10,14 +10,17 @@ class ApiService {
   ApiService() {
     _dio = Dio(BaseOptions(
       baseUrl: ApiConfig.baseUrl,
-      connectTimeout: const Duration(seconds: 60),
-      receiveTimeout: const Duration(seconds: 60),
-      sendTimeout: const Duration(seconds: 60),
+      connectTimeout: const Duration(seconds: 120), // Increased to 120 seconds
+      receiveTimeout: const Duration(seconds: 120), // Increased to 120 seconds
+      sendTimeout: const Duration(seconds: 120),    // Increased to 120 seconds
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
     ));
+
+    print('🚀 API Service initialized');
+    print('📍 Base URL: ${ApiConfig.baseUrl}');
 
     // Add interceptors for logging and error handling
     _dio.interceptors.add(InterceptorsWrapper(
@@ -172,11 +175,14 @@ class ApiService {
       }
     } else {
       // Network or other errors
-      if (error.type == DioExceptionType.connectionTimeout ||
-          error.type == DioExceptionType.receiveTimeout) {
-        errorMessage = 'Connection timeout. Please check your internet.';
+      if (error.type == DioExceptionType.connectionTimeout) {
+        errorMessage = 'Connection timeout. Please check:\n1. Backend server is running\n2. Correct IP address in API config\n3. Device can reach server';
+      } else if (error.type == DioExceptionType.receiveTimeout) {
+        errorMessage = 'Server response timeout. Server may be slow or overloaded.';
       } else if (error.type == DioExceptionType.unknown) {
-        errorMessage = 'No internet connection';
+        errorMessage = 'Network error. Check internet connection and server accessibility.';
+      } else if (error.type == DioExceptionType.cancel) {
+        errorMessage = 'Request was cancelled';
       }
     }
 

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "964438327357",
+    "project_id": "prevailmart",
+    "storage_bucket": "prevailmart.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:964438327357:android:abafe56b4a06e9c4d22a54",
+        "android_client_info": {
+          "package_name": "com.prevailmart.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBv3ga_42LiKJrvtu4v-hNY762q8KDzxKo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

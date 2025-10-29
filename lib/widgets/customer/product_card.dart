@@ -23,6 +23,8 @@ class ProductCard extends StatefulWidget {
 }
 
 class _ProductCardState extends State<ProductCard> {
+  bool _isPressed = false;
+
   @override
   Widget build(BuildContext context) {
     final cart = context.watch<CartProvider>();

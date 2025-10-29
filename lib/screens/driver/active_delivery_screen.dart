@@ -7,7 +7,6 @@ import '../../config/app_colors.dart';
 import '../../models/delivery_model.dart';
 import '../../providers/delivery_provider.dart';
 import '../../services/location_service.dart';
-import '../../services/realtime_delivery_service.dart';
 import '../../widgets/common/custom_button.dart';
 
 /// Active Delivery Screen - View delivery details with live map tracking
@@ -34,14 +33,13 @@ class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
   void initState() {
     super.initState();
     _initializeMap();
-    _startRealtimeTracking();
+    _startLocationUpdates();
   }
 
   @override
   void dispose() {
     _locationTimer?.cancel();
     _mapController?.dispose();
-    realtimeDeliveryService.stopTracking();
     super.dispose();
   }
 
@@ -104,22 +102,22 @@ class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
     );
   }
 
-  void _startRealtimeTracking() async {
-    // Initialize the real-time delivery service with provider
-    final deliveryProvider = context.read<DeliveryProvider>();
-    realtimeDeliveryService.init(deliveryProvider);
-
-    // Start real-time tracking for this delivery
-    await realtimeDeliveryService.startTracking(widget.delivery.id);
-
-    // Update map with location changes (still use timer for UI updates)
-    _locationTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
+  void _startLocationUpdates() {
+    // Update location every 10 seconds
+    _locationTimer = Timer.periodic(const Duration(seconds: 10), (timer) async {
       final locationData = await locationService.getCurrentLocation();
       if (locationData != null && locationData.latitude != null && locationData.longitude != null) {
         if (mounted) {
           setState(() {
             _driverLocation = LatLng(locationData.latitude!, locationData.longitude!);
           });
+
+          // Update backend with new location
+          context.read<DeliveryProvider>().updateLocation(
+                widget.delivery.id,
+                locationData.latitude!,
+                locationData.longitude!,
+              );
         }
       }
     });

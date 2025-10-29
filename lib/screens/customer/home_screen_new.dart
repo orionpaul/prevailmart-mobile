@@ -8,6 +8,7 @@ import '../../services/api_service.dart';
 import '../../providers/cart_provider.dart';
 import '../../widgets/customer/product_card.dart';
 import '../../widgets/customer/product_card_shimmer.dart';
+import 'cart_screen.dart';
 import 'products_screen.dart';
 import 'location_picker_screen.dart';
 import 'product_search_screen.dart';
@@ -23,8 +24,7 @@ class HomeScreenNew extends StatefulWidget {
   State<HomeScreenNew> createState() => _HomeScreenNewState();
 }
 
-class _HomeScreenNewState extends State<HomeScreenNew>
-    with AutomaticKeepAliveClientMixin, SingleTickerProviderStateMixin {
+class _HomeScreenNewState extends State<HomeScreenNew> with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
 
@@ -35,44 +35,11 @@ class _HomeScreenNewState extends State<HomeScreenNew>
   Timer? _cacheTimer;
   Address? _selectedAddress;
 
-  late AnimationController _bannerAnimController;
-  late Animation<double> _bannerSlideAnimation;
-  late Animation<double> _bannerFadeAnimation;
-
   @override
   void initState() {
     super.initState();
     _loadProducts();
     _loadCategories();
-
-    // Initialize banner animation
-    _bannerAnimController = AnimationController(
-      duration: const Duration(milliseconds: 1200),
-      vsync: this,
-    );
-
-    _bannerSlideAnimation = Tween<double>(
-      begin: 50.0,
-      end: 0.0,
-    ).animate(CurvedAnimation(
-      parent: _bannerAnimController,
-      curve: Curves.easeOutCubic,
-    ));
-
-    _bannerFadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _bannerAnimController,
-      curve: Curves.easeOut,
-    ));
-
-    // Start banner animation after a short delay
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (mounted) {
-        _bannerAnimController.forward();
-      }
-    });
 
     // Cache products periodically (every 5 minutes)
     _cacheTimer = Timer.periodic(const Duration(minutes: 5), (timer) {
@@ -83,7 +50,6 @@ class _HomeScreenNewState extends State<HomeScreenNew>
   @override
   void dispose() {
     _cacheTimer?.cancel();
-    _bannerAnimController.dispose();
     super.dispose();
   }
 
@@ -161,24 +127,7 @@ class _HomeScreenNewState extends State<HomeScreenNew>
             // Header with Logo, Delivery Address & Cart
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppColors.white,
-                    AppColors.primary.withOpacity(0.03),
-                    AppColors.white,
-                  ],
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.08),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
+              color: AppColors.white,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -325,90 +274,72 @@ class _HomeScreenNewState extends State<HomeScreenNew>
                     children: [
                       const SizedBox(height: 16),
 
-                      // Promotional Banner with Animation
-                      AnimatedBuilder(
-                        animation: _bannerAnimController,
-                        builder: (context, child) {
-                          return Opacity(
-                            opacity: _bannerFadeAnimation.value,
-                            child: Transform.translate(
-                              offset: Offset(0, _bannerSlideAnimation.value),
-                              child: Container(
-                                margin: const EdgeInsets.symmetric(horizontal: 16),
-                                padding: const EdgeInsets.all(20),
-                                decoration: BoxDecoration(
-                                  gradient: AppColors.primaryGradient,
-                                  borderRadius: BorderRadius.circular(20),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: AppColors.primary.withOpacity(0.3),
-                                      blurRadius: 20,
-                                      offset: const Offset(0, 8),
+                      // Promotional Banner
+                      Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          gradient: AppColors.primaryGradient,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Shop Smarter,',
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.white,
+                                      height: 1.2,
                                     ),
-                                  ],
-                                ),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          const Text(
-                                            'Shop Smarter,',
-                                            style: TextStyle(
-                                              fontSize: 24,
-                                              fontWeight: FontWeight.bold,
-                                              color: AppColors.white,
-                                              height: 1.2,
-                                            ),
-                                          ),
-                                          const Text(
-                                            'Save More!',
-                                            style: TextStyle(
-                                              fontSize: 24,
-                                              fontWeight: FontWeight.bold,
-                                              color: AppColors.white,
-                                              height: 1.2,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 12),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 16,
-                                              vertical: 8,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: AppColors.white.withOpacity(0.3),
-                                              borderRadius: BorderRadius.circular(20),
-                                              border: Border.all(
-                                                color: AppColors.white.withOpacity(0.5),
-                                                width: 1,
-                                              ),
-                                            ),
-                                            child: const Text(
-                                              'Get 40% Off ✨',
-                                              style: TextStyle(
-                                                color: AppColors.white,
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
+                                  ),
+                                  const Text(
+                                    'Save More!',
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.white,
+                                      height: 1.2,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.white.withOpacity(0.3),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: AppColors.white.withOpacity(0.5),
+                                        width: 1,
                                       ),
                                     ),
-                                    const SizedBox(width: 16),
-                                    const Icon(
-                                      Icons.shopping_basket,
-                                      size: 80,
-                                      color: Color.fromRGBO(255, 255, 255, 0.3),
+                                    child: const Text(
+                                      'Get 40% Off ✨',
+                                      style: TextStyle(
+                                        color: AppColors.white,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             ),
-                          );
-                        },
+                            const SizedBox(width: 16),
+                            const Icon(
+                              Icons.shopping_basket,
+                              size: 80,
+                              color: Color.fromRGBO(255, 255, 255, 0.3),
+                            ),
+                          ],
+                        ),
                       ),
 
                       const SizedBox(height: 20),
