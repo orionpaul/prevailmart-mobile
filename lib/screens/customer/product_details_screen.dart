@@ -359,28 +359,6 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                         // Features
                         _buildFeatures(),
 
-                        const SizedBox(height: 24),
-
-                        // Description
-                        const Text(
-                          'Description',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          widget.product.description ??
-                              'Premium quality product carefully selected for you. Experience the best in class quality and design.',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            height: 1.6,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-
                         const SizedBox(height: 100), // Space for button
                       ],
                     ),
