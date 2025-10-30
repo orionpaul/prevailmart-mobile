@@ -127,7 +127,15 @@ class _HomeScreenNewState extends State<HomeScreenNew> with AutomaticKeepAliveCl
             // Header with Logo, Delivery Address & Cart
             Container(
               padding: const EdgeInsets.all(16),
-              color: AppColors.white,
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                border: Border(
+                  bottom: BorderSide(
+                    color: AppColors.grey200.withOpacity(0.4),
+                    width: 0.5,
+                  ),
+                ),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -236,8 +244,15 @@ class _HomeScreenNewState extends State<HomeScreenNew> with AutomaticKeepAliveCl
                         child: Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: AppColors.textPrimary,
-                            borderRadius: BorderRadius.circular(12),
+                            color: AppColors.primary.withOpacity(0.95),
+                            borderRadius: BorderRadius.circular(14),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.primary.withOpacity(0.15),
+                                blurRadius: 4,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
                           ),
                           child: badges.Badge(
                             showBadge: cart.itemCount > 0,
@@ -277,10 +292,24 @@ class _HomeScreenNewState extends State<HomeScreenNew> with AutomaticKeepAliveCl
                       // Promotional Banner
                       Container(
                         margin: const EdgeInsets.symmetric(horizontal: 16),
-                        padding: const EdgeInsets.all(20),
+                        padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          gradient: AppColors.primaryGradient,
-                          borderRadius: BorderRadius.circular(20),
+                          gradient: LinearGradient(
+                            colors: [
+                              AppColors.primary.withOpacity(0.9),
+                              AppColors.primaryDark.withOpacity(0.85),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primary.withOpacity(0.1),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
                         child: Row(
                           children: [

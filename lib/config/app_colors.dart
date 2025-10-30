@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 
 /// PrevailMart Premium Brand Colors - Clean & Professional
 class AppColors {
-  // Primary Brand Colors - PrevailMart Blue (from website)
-  static const Color primary = Color(0xFF4A6CB7); // PrevailMart Blue
-  static const Color primaryDark = Color(0xFF3A5899); // Darker Blue
-  static const Color primaryLight = Color(0xFF5A7CC7);
-  static const Color primaryLighter = Color(0xFF8BA5D9);
+  // Primary Brand Colors - PrevailMart Blue (lighter, softer)
+  static const Color primary = Color(0xFF425AAE); // Softer PrevailMart Blue
+  static const Color primaryDark = Color(0xFF364a93); // Softer dark blue
+  static const Color primaryLight = Color(0xFF6B84D4); // Lighter blue
+  static const Color primaryLighter = Color(0xFFA8B9E8); // Much lighter blue
 
   // Secondary Colors - Clean Blue Accent
   static const Color secondary = Color(0xFF4A6CB7); // Use primary blue
@@ -62,11 +62,11 @@ class AppColors {
   static const Color grey800 = Color(0xFF424242);
   static const Color grey900 = Color(0xFF212121);
 
-  // Background Colors - Clean & Minimal
-  static const Color background = Color(0xFFFAFAFA);
+  // Background Colors - Clean & Minimal (lighter, softer)
+  static const Color background = Color(0xFFFCFCFD); // Even lighter background
   static const Color cardBackground = Color(0xFFFFFFFF);
   static const Color surface = Color(0xFFFFFFFF);
-  static const Color surfaceLight = Color(0xFFF9FAFB);
+  static const Color surfaceLight = Color(0xFFFAFBFC);
 
   // Text Colors - Crisp & Clear
   static const Color textPrimary = Color(0xFF1F2937);

@@ -43,12 +43,16 @@ class _ProductCardState extends State<ProductCard> {
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: AppColors.grey200.withOpacity(0.6),
+            width: 0.8,
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
             ),
           ],
         ),
@@ -61,10 +65,10 @@ class _ProductCardState extends State<ProductCard> {
                 Hero(
                   tag: 'product-${widget.product.id}',
                   child: ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(19)),
                     child: Container(
                       height: 120,
-                      color: AppColors.grey100,
+                      color: AppColors.grey50,
                       child: widget.product.displayImage != null
                           ? CachedNetworkImage(
                               imageUrl: widget.product.displayImage!,
@@ -194,18 +198,18 @@ class _ProductCardState extends State<ProductCard> {
                           child: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: isInCart ? AppColors.success : AppColors.primary,
+                              color: isInCart ? AppColors.success.withOpacity(0.95) : AppColors.primary.withOpacity(0.95),
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: (isInCart ? AppColors.success : AppColors.primary).withOpacity(0.3),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 2),
+                                  color: (isInCart ? AppColors.success : AppColors.primary).withOpacity(0.15),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 1),
                                 ),
                               ],
                             ),
                             child: Icon(
-                              isInCart ? Icons.check_rounded : Icons.shopping_cart_outlined,
+                              isInCart ? Icons.check_rounded : Icons.add_rounded,
                               size: 18,
                               color: AppColors.white,
                             ),

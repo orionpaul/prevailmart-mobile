@@ -2,16 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../config/app_colors.dart';
 import '../../models/order_model.dart';
+import '../../services/api_service.dart';
 import 'track_order_screen.dart';
 
 /// Order Details Screen - Comprehensive view of a single order
-class OrderDetailsScreen extends StatelessWidget {
+class OrderDetailsScreen extends StatefulWidget {
   final Order order;
 
   const OrderDetailsScreen({
     super.key,
     required this.order,
   });
+
+  @override
+  State<OrderDetailsScreen> createState() => _OrderDetailsScreenState();
+}
+
+class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
+  bool _isCancelling = false;
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +54,7 @@ class OrderDetailsScreen extends StatelessWidget {
             const SizedBox(height: 20),
 
             // Delivery Address Card
-            if (order.deliveryAddress != null) ...[
+            if (widget.order.deliveryAddress != null) ...[
               _buildDeliveryAddressCard(),
               const SizedBox(height: 20),
             ],
@@ -60,9 +68,160 @@ class OrderDetailsScreen extends StatelessWidget {
             const SizedBox(height: 20),
 
             // Track Order Button
-            if (order.canTrack && order.trackingNumber != null)
+            if (widget.order.canTrack && widget.order.trackingNumber != null)
               _buildTrackOrderButton(context),
+
+            // Cancel Order Button
+            if (_canCancelOrder()) ...[
+              if (widget.order.canTrack && widget.order.trackingNumber != null)
+                const SizedBox(height: 12),
+              _buildCancelOrderButton(context),
+            ],
           ],
+        ),
+      ),
+    );
+  }
+
+  /// Check if order can be cancelled
+  bool _canCancelOrder() {
+    final status = widget.order.status.toLowerCase();
+    return status == 'pending' || status == 'confirmed';
+  }
+
+  /// Show confirmation dialog for order cancellation
+  Future<void> _showCancelConfirmation(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text(
+          'Cancel Order',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        content: const Text(
+          'Are you sure you want to cancel this order?',
+          style: TextStyle(
+            color: AppColors.textSecondary,
+          ),
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text(
+              'No',
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: AppColors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text(
+              'Yes, Cancel',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      await _cancelOrder(context);
+    }
+  }
+
+  /// Cancel the order
+  Future<void> _cancelOrder(BuildContext context) async {
+    setState(() {
+      _isCancelling = true;
+    });
+
+    try {
+      await apiService.delete('/orders/${widget.order.id}');
+
+      if (context.mounted) {
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Order cancelled successfully'),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 3),
+          ),
+        );
+
+        // Navigate back to orders list
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        // Show error message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to cancel order: ${e.toString()}'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCancelling = false;
+        });
+      }
+    }
+  }
+
+  /// Build Cancel Order Button
+  Widget _buildCancelOrderButton(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 0),
+      child: ElevatedButton.icon(
+        onPressed: _isCancelling ? null : () => _showCancelConfirmation(context),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.error,
+          foregroundColor: AppColors.white,
+          disabledBackgroundColor: AppColors.error.withOpacity(0.5),
+          disabledForegroundColor: AppColors.white.withOpacity(0.7),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          elevation: 0,
+        ),
+        icon: _isCancelling
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
+                ),
+              )
+            : const Icon(Icons.warning, size: 24),
+        label: Text(
+          _isCancelling ? 'Cancelling...' : 'Cancel Order',
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
     );
@@ -73,7 +232,7 @@ class OrderDetailsScreen extends StatelessWidget {
     Color textColor;
     IconData icon;
 
-    switch (order.status.toLowerCase()) {
+    switch (widget.order.status.toLowerCase()) {
       case 'pending':
         bgColor = AppColors.warning.withOpacity(0.1);
         textColor = AppColors.warning;
@@ -137,7 +296,7 @@ class OrderDetailsScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  order.statusDisplay,
+                  widget.order.statusDisplay,
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -177,7 +336,7 @@ class OrderDetailsScreen extends StatelessWidget {
           _buildInfoRow(
             Icons.tag,
             'Order Number',
-            '#${order.id.substring(order.id.length - 6).toUpperCase()}',
+            '#${widget.order.id.substring(widget.order.id.length - 6).toUpperCase()}',
           ),
           const Divider(height: 24),
 
@@ -185,25 +344,25 @@ class OrderDetailsScreen extends StatelessWidget {
           _buildInfoRow(
             Icons.calendar_today,
             'Order Date',
-            DateFormat('MMM dd, yyyy · HH:mm').format(order.createdAt),
+            DateFormat('MMM dd, yyyy · HH:mm').format(widget.order.createdAt),
           ),
           const Divider(height: 24),
 
           // Tracking Number
-          if (order.trackingNumber != null)
+          if (widget.order.trackingNumber != null)
             _buildInfoRow(
               Icons.local_shipping,
               'Tracking Number',
-              order.trackingNumber!,
+              widget.order.trackingNumber!,
             ),
-          if (order.trackingNumber != null) const Divider(height: 24),
+          if (widget.order.trackingNumber != null) const Divider(height: 24),
 
           // Payment Method
-          if (order.paymentMethod != null)
+          if (widget.order.paymentMethod != null)
             _buildInfoRow(
               Icons.payment,
               'Payment Method',
-              _formatPaymentMethod(order.paymentMethod!),
+              _formatPaymentMethod(widget.order.paymentMethod!),
             ),
         ],
       ),
@@ -248,7 +407,7 @@ class OrderDetailsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            order.deliveryAddress ?? 'No address provided',
+            widget.order.deliveryAddress ?? 'No address provided',
             style: const TextStyle(
               fontSize: 14,
               color: AppColors.textSecondary,
@@ -305,7 +464,7 @@ class OrderDetailsScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  '${order.items.length} ${order.items.length == 1 ? 'item' : 'items'}',
+                  '${widget.order.items.length} ${widget.order.items.length == 1 ? 'item' : 'items'}',
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -318,7 +477,7 @@ class OrderDetailsScreen extends StatelessWidget {
           const SizedBox(height: 16),
 
           // Order Items List
-          ...order.items.map((item) => _buildOrderItem(item)),
+          ...widget.order.items.map((item) => _buildOrderItem(item)),
         ],
       ),
     );
@@ -341,14 +500,14 @@ class OrderDetailsScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.grey200,
               borderRadius: BorderRadius.circular(8),
-              image: item.product.imageUrl != null
+              image: item.product.displayImage != null
                   ? DecorationImage(
-                      image: NetworkImage(item.product.imageUrl!),
+                      image: NetworkImage(item.product.displayImage!),
                       fit: BoxFit.cover,
                     )
                   : null,
             ),
-            child: item.product.imageUrl == null
+            child: item.product.displayImage == null
                 ? const Icon(
                     Icons.image,
                     color: AppColors.grey400,
@@ -433,7 +592,7 @@ class OrderDetailsScreen extends StatelessWidget {
                 ),
               ),
               Text(
-                '\$${order.total.toStringAsFixed(2)}',
+                '\$${widget.order.total.toStringAsFixed(2)}',
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -456,7 +615,7 @@ class OrderDetailsScreen extends StatelessWidget {
             context,
             MaterialPageRoute(
               builder: (_) => TrackOrderScreen(
-                trackingNumber: order.trackingNumber!,
+                trackingNumber: widget.order.trackingNumber!,
               ),
             ),
           );
