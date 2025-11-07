@@ -2,6 +2,9 @@ import 'package:location/location.dart' as loc;
 import 'package:geocoding/geocoding.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:math' show cos, sqrt, asin;
+import '../utils/logger.dart';
+import '../config/api_config.dart';
+import 'api_service.dart';
 
 /// Location Service - Handles location permissions and fetching
 class LocationService {
@@ -183,6 +186,86 @@ class LocationService {
 
   double sin(double radians) {
     return radians - (radians * radians * radians) / 6;
+  }
+
+  /// Get delivery information for a location
+  Future<Map<String, dynamic>?> getDeliveryInfo(
+    double latitude,
+    double longitude, {
+    double orderAmount = 0,
+  }) async {
+    try {
+      AppLogger.location('Fetching delivery info', 'lat: $latitude, lng: $longitude');
+
+      final response = await apiService.get(
+        '${ApiConfig.deliveryInfo}?latitude=$latitude&longitude=$longitude&orderAmount=$orderAmount',
+      );
+
+      if (response.data != null) {
+        AppLogger.success('Delivery info fetched', response.data);
+        return response.data as Map<String, dynamic>;
+      }
+
+      return null;
+    } catch (e) {
+      AppLogger.error('Error fetching delivery info', e);
+      return null;
+    }
+  }
+
+  /// Check if location is in delivery zone
+  Future<List<dynamic>?> getDeliveryZones(
+    double latitude,
+    double longitude,
+  ) async {
+    try {
+      AppLogger.location('Checking delivery zones', 'lat: $latitude, lng: $longitude');
+
+      final response = await apiService.get(
+        '${ApiConfig.deliveryZonesByLocation}?latitude=$latitude&longitude=$longitude',
+      );
+
+      if (response.data != null) {
+        final zones = response.data as List<dynamic>;
+        AppLogger.success('Found ${zones.length} delivery zones');
+        return zones;
+      }
+
+      return null;
+    } catch (e) {
+      AppLogger.error('Error checking delivery zones', e);
+      return null;
+    }
+  }
+
+  /// Calculate delivery time estimate
+  Future<Map<String, dynamic>?> calculateDeliveryTime(
+    double fromLat,
+    double fromLng,
+    double toLat,
+    double toLng,
+  ) async {
+    try {
+      AppLogger.location('Calculating delivery time');
+
+      final response = await apiService.post(
+        ApiConfig.calculateDeliveryTime,
+        data: {
+          'from': {'latitude': fromLat, 'longitude': fromLng},
+          'to': {'latitude': toLat, 'longitude': toLng},
+        },
+      );
+
+      if (response.data != null) {
+        AppLogger.success('Delivery time calculated', response.data);
+        return response.data as Map<String, dynamic>;
+      }
+
+      return null;
+    } catch (e) {
+      AppLogger.error('Error calculating delivery time', e);
+      return null;
+    }
   }
 }
 

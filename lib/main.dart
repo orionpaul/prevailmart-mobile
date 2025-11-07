@@ -4,6 +4,7 @@ import 'config/app_colors.dart';
 import 'providers/auth_provider.dart';
 import 'providers/cart_provider.dart';
 import 'providers/delivery_provider.dart';
+import 'providers/favorites_provider.dart';
 import 'services/storage_service.dart';
 import 'screens/splash_screen.dart';
 import 'screens/customer/customer_main_screen.dart';
@@ -30,6 +31,7 @@ class PrevailMartApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()..initialize()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
         ChangeNotifierProvider(create: (_) => DeliveryProvider()),
+        ChangeNotifierProvider(create: (_) => FavoritesProvider()),
       ],
       child: MaterialApp(
         title: 'PrevailMart - Shop & Deliver',
@@ -79,6 +81,7 @@ class _AppRootState extends State<AppRoot> {
   Future<void> _initializeApp() async {
     final auth = context.read<AuthProvider>();
     final cart = context.read<CartProvider>();
+    final favorites = context.read<FavoritesProvider>();
 
     // Wait for auth to initialize
     await Future.delayed(const Duration(milliseconds: 100));
@@ -88,10 +91,18 @@ class _AppRootState extends State<AppRoot> {
       print('🔄 Setting cart authenticated state');
       cart.setAuthenticated(true);
       await cart.fetchCart();
+
+      // Load favorites for authenticated user
+      favorites.setAuthenticated(true);
+      await favorites.loadFavorites();
     } else {
       print('🔄 Loading guest cart');
       cart.setAuthenticated(false);
       await cart.fetchCart();
+
+      // Load local favorites for guest
+      favorites.setAuthenticated(false);
+      await favorites.loadFavorites();
     }
   }
 

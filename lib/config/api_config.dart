@@ -13,7 +13,7 @@ class ApiConfig {
   // Automatically detect platform and configure URLs
   static String get baseUrl {
     if (isProduction) {
-      return 'https://backend-prevailmart.onrender.com/api';
+      return 'https://prevailmart-backend.onrender.com/api';
     }
 
     // Local development URLs
@@ -31,7 +31,7 @@ class ApiConfig {
 
   static String get socketUrl {
     if (isProduction) {
-      return 'https://backend-prevailmart.onrender.com';
+      return 'https://prevailmart-backend.onrender.com';
     }
 
     // Local development URLs
@@ -67,6 +67,12 @@ class ApiConfig {
   static const String acceptDelivery = '/deliveries/{id}/accept';
   static const String updateLocation = '/deliveries/{id}/location';
   static const String completeDelivery = '/deliveries/{id}/complete';
+
+  // Delivery Zones Endpoints
+  static const String deliveryZones = '/delivery-zones';
+  static const String deliveryZonesByLocation = '/delivery-zones/by-location';
+  static const String deliveryInfo = '/delivery-zones/delivery-info';
+  static const String calculateDeliveryTime = '/delivery-zones/calculate-time';
 
   // Storage Keys
   static const String tokenKey = 'access_token';

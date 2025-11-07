@@ -3,6 +3,7 @@ import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import '../config/app_colors.dart';
 import '../services/api_service.dart';
+import '../utils/logger.dart';
 
 /// Review Model
 class Review {
@@ -137,7 +138,7 @@ class _ProductReviewsWidgetState extends State<ProductReviewsWidget> {
         });
       }
     } catch (e) {
-      print('Error loading reviews: $e');
+      AppLogger.error('Error loading reviews', e);
       setState(() {
         _reviews = [];
         _isLoading = false;
@@ -220,7 +221,7 @@ class _ProductReviewsWidgetState extends State<ProductReviewsWidget> {
         );
       }
     } catch (e) {
-      print('Error submitting review: $e');
+      AppLogger.error('Error submitting review', e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -684,7 +685,7 @@ class _ProductReviewsWidgetState extends State<ProductReviewsWidget> {
                 // Reload reviews to get updated helpful count
                 await _loadReviews();
               } catch (e) {
-                print('Error marking review as helpful: $e');
+                AppLogger.error('Error marking review as helpful', e);
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
