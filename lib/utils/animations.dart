@@ -149,20 +149,17 @@ class RotationRoute extends PageRouteBuilder {
 }
 
 /// Custom Hero Animation for product images
-class CustomHeroFlightShuttleBuilder extends HeroFlightShuttleBuilder {
-  @override
-  Widget buildShuttle(
-    BuildContext flightContext,
-    Animation<double> animation,
-    HeroFlightDirection flightDirection,
-    BuildContext fromHeroContext,
-    BuildContext toHeroContext,
-  ) {
-    return ScaleTransition(
-      scale: animation,
-      child: toHeroContext.widget,
-    );
-  }
+Widget customHeroFlightShuttleBuilder(
+  BuildContext flightContext,
+  Animation<double> animation,
+  HeroFlightDirection flightDirection,
+  BuildContext fromHeroContext,
+  BuildContext toHeroContext,
+) {
+  return ScaleTransition(
+    scale: animation,
+    child: toHeroContext.widget,
+  );
 }
 
 /// Animated List Item (for orders, products, etc.)

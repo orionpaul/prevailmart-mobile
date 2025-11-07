@@ -11,11 +11,13 @@ import '../../screens/customer/product_details_screen.dart';
 class ProductCard extends StatefulWidget {
   final Product product;
   final VoidCallback? onTap;
+  final VoidCallback? onRemoved; // Callback when product is removed from favorites
 
   const ProductCard({
     super.key,
     required this.product,
     this.onTap,
+    this.onRemoved,
   });
 
   @override
