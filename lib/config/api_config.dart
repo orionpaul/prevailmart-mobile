@@ -13,7 +13,7 @@ class ApiConfig {
   // Automatically detect platform and configure URLs
   static String get baseUrl {
     if (isProduction) {
-      return 'https://prevailmart-backend.onrender.com/api';
+      return 'https://backend-prevailmart.onrender.com/api';
     }
 
     // Local development URLs
@@ -31,7 +31,7 @@ class ApiConfig {
 
   static String get socketUrl {
     if (isProduction) {
-      return 'https://prevailmart-backend.onrender.com';
+      return 'https://backend-prevailmart.onrender.com';
     }
 
     // Local development URLs

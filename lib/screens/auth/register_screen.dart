@@ -4,6 +4,7 @@ import '../../config/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/common/custom_button.dart';
 import '../../widgets/common/custom_text_field.dart';
+import '../../utils/validators.dart';
 
 /// Register Screen - Customer registration only
 class RegisterScreen extends StatefulWidget {
@@ -121,15 +122,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   label: 'Full Name',
                   hint: 'Enter your full name',
                   prefixIcon: Icons.person_outline,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your name';
-                    }
-                    if (value.length < 2) {
-                      return 'Name must be at least 2 characters';
-                    }
-                    return null;
-                  },
+                  validator: (value) => Validators.validateName(value, 'Name'),
                 ),
 
                 const SizedBox(height: 16),
@@ -141,15 +134,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   hint: 'Enter your email',
                   keyboardType: TextInputType.emailAddress,
                   prefixIcon: Icons.email_outlined,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your email';
-                    }
-                    if (!value.contains('@')) {
-                      return 'Please enter a valid email';
-                    }
-                    return null;
-                  },
+                  validator: Validators.validateEmail,
                 ),
 
                 const SizedBox(height: 16),

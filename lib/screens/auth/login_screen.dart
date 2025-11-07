@@ -8,6 +8,7 @@ import '../../widgets/common/custom_text_field.dart';
 import '../customer/customer_main_screen.dart';
 import '../driver/driver_main_screen.dart';
 import 'register_screen.dart';
+import '../../utils/validators.dart';
 
 /// Login Screen - Premium UI with smooth animations
 class LoginScreen extends StatefulWidget {
@@ -199,15 +200,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   hint: 'Enter your email',
                   keyboardType: TextInputType.emailAddress,
                   prefixIcon: Icons.email_outlined,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your email';
-                    }
-                    if (!value.contains('@')) {
-                      return 'Please enter a valid email';
-                    }
-                    return null;
-                  },
+                  validator: Validators.validateEmail,
                 ),
 
                 const SizedBox(height: 16),
