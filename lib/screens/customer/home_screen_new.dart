@@ -8,6 +8,7 @@ import '../../services/api_service.dart';
 import '../../providers/cart_provider.dart';
 import '../../widgets/customer/product_card.dart';
 import '../../widgets/customer/product_card_shimmer.dart';
+import '../../widgets/common/promotional_banner_carousel.dart';
 import 'cart_screen.dart';
 import 'products_screen.dart';
 import 'location_picker_screen.dart';
@@ -287,88 +288,11 @@ class _HomeScreenNewState extends State<HomeScreenNew> with AutomaticKeepAliveCl
                 child: SingleChildScrollView(
                   child: Column(
                     children: [
-                      const SizedBox(height: 16),
-
-                      // Promotional Banner
-                      Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 16),
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              AppColors.primary.withOpacity(0.9),
-                              AppColors.primaryDark.withOpacity(0.85),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withOpacity(0.1),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Shop Smarter,',
-                                    style: TextStyle(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.white,
-                                      height: 1.2,
-                                    ),
-                                  ),
-                                  const Text(
-                                    'Save More!',
-                                    style: TextStyle(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.white,
-                                      height: 1.2,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 8,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.white.withOpacity(0.3),
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(
-                                        color: AppColors.white.withOpacity(0.5),
-                                        width: 1,
-                                      ),
-                                    ),
-                                    child: const Text(
-                                      'Get 40% Off ✨',
-                                      style: TextStyle(
-                                        color: AppColors.white,
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            const Icon(
-                              Icons.shopping_basket,
-                              size: 80,
-                              color: Color.fromRGBO(255, 255, 255, 0.3),
-                            ),
-                          ],
-                        ),
+                      // Animated Promotional Banner Carousel - Amazon Style
+                      const PromotionalBannerCarousel(
+                        height: 180,
+                        autoPlayDuration: Duration(seconds: 5),
+                        transitionDuration: Duration(milliseconds: 800),
                       ),
 
                       const SizedBox(height: 20),

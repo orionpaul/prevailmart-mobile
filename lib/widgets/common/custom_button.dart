@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../config/app_colors.dart';
 
-/// Premium Custom Button - Beautiful gradients and smooth animations
+/// LIT Premium Custom Button - Lightweight, Modern, Sleek Design
 class CustomButton extends StatefulWidget {
   final String text;
   final VoidCallback? onPressed;
   final bool isLoading;
   final bool isOutlined;
+  final bool isWhite; // New: White button with primary border
   final Color? color;
   final Color? textColor;
   final IconData? icon;
@@ -21,12 +22,13 @@ class CustomButton extends StatefulWidget {
     this.onPressed,
     this.isLoading = false,
     this.isOutlined = false,
+    this.isWhite = false, // New white variant
     this.color,
     this.textColor,
     this.icon,
     this.width,
     this.height = 52,
-    this.borderRadius = 30,
+    this.borderRadius = 16, // More modern, less rounded
     this.useGradient = false,
   });
 
@@ -79,6 +81,46 @@ class _CustomButtonState extends State<CustomButton> with SingleTickerProviderSt
     final buttonColor = widget.color ?? AppColors.primary;
     final btnTextColor = widget.textColor ?? AppColors.white;
 
+    // Determine button style
+    Color? backgroundColor;
+    Color textColor;
+    Border? border;
+    List<BoxShadow>? boxShadow;
+
+    if (widget.isWhite) {
+      // White button with primary border - LIT style
+      backgroundColor = AppColors.white;
+      textColor = buttonColor;
+      border = Border.all(color: buttonColor, width: 2);
+      boxShadow = !widget.isLoading
+          ? [
+              BoxShadow(
+                color: buttonColor.withOpacity(_isPressed ? 0.15 : 0.2),
+                blurRadius: _isPressed ? 8 : 12,
+                offset: Offset(0, _isPressed ? 2 : 4),
+              ),
+            ]
+          : null;
+    } else if (widget.isOutlined) {
+      backgroundColor = Colors.transparent;
+      textColor = buttonColor;
+      border = Border.all(color: buttonColor, width: 1.5);
+      boxShadow = null;
+    } else {
+      backgroundColor = widget.useGradient ? null : buttonColor;
+      textColor = btnTextColor;
+      border = null;
+      boxShadow = !widget.isLoading
+          ? [
+              BoxShadow(
+                color: buttonColor.withOpacity(_isPressed ? 0.2 : 0.3),
+                blurRadius: _isPressed ? 8 : 16,
+                offset: Offset(0, _isPressed ? 2 : 4),
+              ),
+            ]
+          : null;
+    }
+
     return ScaleTransition(
       scale: _scaleAnimation,
       child: GestureDetector(
@@ -95,30 +137,16 @@ class _CustomButtonState extends State<CustomButton> with SingleTickerProviderSt
           width: widget.width ?? double.infinity,
           height: widget.height,
           decoration: BoxDecoration(
-            gradient: widget.isOutlined
-                ? null
-                : (widget.useGradient ? AppColors.primaryGradient : null),
-            color: widget.isOutlined
-                ? Colors.transparent
-                : (widget.useGradient ? null : buttonColor),
-            border: widget.isOutlined
-                ? Border.all(color: buttonColor, width: 1.5)
+            gradient: (!widget.isOutlined && !widget.isWhite && widget.useGradient)
+                ? AppColors.primaryGradient
                 : null,
+            color: backgroundColor,
+            border: border,
             borderRadius: BorderRadius.circular(widget.borderRadius),
-            boxShadow: widget.isOutlined || widget.isLoading
-                ? null
-                : [
-                    BoxShadow(
-                      color: buttonColor.withOpacity(_isPressed ? 0.08 : 0.12),
-                      blurRadius: _isPressed ? 4 : 6,
-                      offset: Offset(0, _isPressed ? 1 : 2),
-                    ),
-                  ],
+            boxShadow: boxShadow,
           ),
           child: Center(
-            child: _buildContent(
-              widget.isOutlined ? buttonColor : btnTextColor,
-            ),
+            child: _buildContent(textColor),
           ),
         ),
       ),

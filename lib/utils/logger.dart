@@ -100,6 +100,13 @@ class AppLogger {
     }
   }
 
+  /// Log promotional banner action
+  static void banner(String action, [dynamic data]) {
+    if (kDebugMode) {
+      print('$_prefix 🎯 Banner: $action${data != null ? ' | $data' : ''}');
+    }
+  }
+
   /// Log debug information (only in debug mode)
   static void debug(String message, [dynamic data]) {
     if (kDebugMode) {
