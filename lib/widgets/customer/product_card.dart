@@ -39,8 +39,20 @@ class ProductCard extends StatelessWidget {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFFF8F8F8), // Light gray background like design
+          color: Colors.white,
           borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

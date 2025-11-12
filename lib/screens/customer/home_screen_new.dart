@@ -11,7 +11,7 @@ import '../../widgets/customer/product_card_shimmer.dart';
 import '../../widgets/common/promotional_banner_carousel.dart';
 import 'cart_screen.dart';
 import 'products_screen.dart';
-import 'location_picker_screen.dart';
+import 'simple_location_screen.dart';
 import 'product_search_screen.dart';
 import 'customer_main_screen.dart';
 import '../../models/address_model.dart';
@@ -178,13 +178,18 @@ class _HomeScreenNewState extends State<HomeScreenNew> with AutomaticKeepAliveCl
                       // Location indicator - Simplified
                       Expanded(
                         child: GestureDetector(
-                          onTap: () {
-                            Navigator.push(
+                          onTap: () async {
+                            final selectedAddress = await Navigator.push<Address>(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => const LocationPickerScreen(),
+                                builder: (_) => const SimpleLocationScreen(),
                               ),
                             );
+                            if (selectedAddress != null) {
+                              setState(() {
+                                _selectedAddress = selectedAddress;
+                              });
+                            }
                           },
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -423,123 +428,25 @@ class _HomeScreenNewState extends State<HomeScreenNew> with AutomaticKeepAliveCl
                         ),
                       ),
 
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
 
-                      // Special Offers Section
+                      // Products Header - Clean & Simple
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF5F5F5),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      'Special Offers',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: AppColors.textSecondary,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    const Text(
-                                      '35% Discount',
-                                      style: TextStyle(
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.textPrimary,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    const Text(
-                                      '100% Guaranteed all Fresh\nGrocery Items',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: AppColors.textSecondary,
-                                        height: 1.4,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    ElevatedButton(
-                                      onPressed: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => const ProductsScreen(),
-                                          ),
-                                        );
-                                      },
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppColors.primary,
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 24,
-                                          vertical: 10,
-                                        ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(20),
-                                        ),
-                                      ),
-                                      child: const Text(
-                                        'Shop Now',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Container(
-                                width: 100,
-                                height: 100,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                padding: const EdgeInsets.all(12),
-                                child: Image.asset(
-                                  'assets/logo/logo.png',
-                                  fit: BoxFit.contain,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Icon(
-                                      Icons.local_offer,
-                                      size: 40,
-                                      color: Colors.grey[400],
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Popular Items Header
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
-                              'Popular Items',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
+                            Text(
+                              _selectedCategory == 'All' ? 'All Products' : _selectedCategory,
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textPrimary,
+                                letterSpacing: -0.5,
                               ),
                             ),
-                            TextButton(
-                              onPressed: () {
+                            GestureDetector(
+                              onTap: () {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
@@ -547,12 +454,29 @@ class _HomeScreenNewState extends State<HomeScreenNew> with AutomaticKeepAliveCl
                                   ),
                                 );
                               },
-                              child: const Text(
-                                'View All',
-                                style: TextStyle(
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 13,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Text(
+                                      'See All',
+                                      style: TextStyle(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Icon(
+                                      Icons.arrow_forward_ios,
+                                      color: AppColors.primary,
+                                      size: 12,
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
@@ -560,7 +484,7 @@ class _HomeScreenNewState extends State<HomeScreenNew> with AutomaticKeepAliveCl
                         ),
                       ),
 
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 16),
 
                       // Products Grid
                       _isLoading
