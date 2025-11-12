@@ -645,7 +645,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               ),
             ),
 
-            // Place Order Button
+            // Place Order Button - Enhanced
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -663,6 +663,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   text: 'Place Order',
                   onPressed: _placeOrder,
                   isLoading: _isPlacingOrder,
+                  useGradient: true,
+                  height: 56,
+                  icon: Icons.check_circle_outline,
+                  borderRadius: 16,
                 ),
               ),
             ),
