@@ -171,6 +171,8 @@ class ApiService {
         errorMessage = data['message'];
       } else if (statusCode == 401) {
         errorMessage = 'Unauthorized. Please login again.';
+        // Clear invalid token
+        _handleUnauthorized();
       } else if (statusCode == 404) {
         errorMessage = 'Resource not found';
       } else if (statusCode == 500) {
@@ -191,6 +193,15 @@ class ApiService {
 
     return errorMessage;
   }
+
+  /// Handle 401 Unauthorized - Clear token
+  void _handleUnauthorized() {
+    print('🔐 401 Unauthorized - Clearing invalid token');
+    _token = null;
+    // Clear from storage asynchronously
+    storageService.deleteSecure(ApiConfig.tokenKey);
+    storageService.deleteSecure(ApiConfig.userKey);
+  }
 }
 
 /// Retry Interceptor - Automatically retries failed requests
@@ -201,8 +212,8 @@ class _RetryInterceptor extends Interceptor {
 
   _RetryInterceptor({
     required this.dio,
-    this.retries = 3,
-    this.retryDelay = const Duration(seconds: 2),
+    this.retries = 2,  // Reduced to 2 retries
+    this.retryDelay = const Duration(seconds: 1), // Reduced delay
   });
 
   @override
@@ -215,12 +226,20 @@ class _RetryInterceptor extends Interceptor {
       return handler.next(err);
     }
 
+    // Don't retry connection timeouts to avoid long waits
+    if (err.type == DioExceptionType.connectionTimeout ||
+        err.type == DioExceptionType.receiveTimeout) {
+      print('⏱️ Timeout error - not retrying');
+      return handler.next(err);
+    }
+
     // Don't retry if no retries left
     if (retriesLeft <= 0) {
       return handler.next(err);
     }
 
-    print('🔄 Retrying request (${retries - retriesLeft + 1}/$retries)...');
+    print('🔄 Network error, retrying... (Attempt ${retries - retriesLeft + 1}/$retries)');
+    print('   Error: ${err.type} - ${err.message}');
 
     // Wait before retrying
     await Future.delayed(retryDelay);

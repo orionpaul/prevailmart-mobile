@@ -100,6 +100,17 @@ class ProductProvider with ChangeNotifier {
       }
     } catch (e) {
       print('❌ Failed to fetch products: $e');
+
+      // Check if it's a 401 error - if so, products might not require auth
+      // Just use cached products if available
+      if (e.toString().contains('401')) {
+        print('ℹ️ 401 error - using cached products if available');
+        // Keep existing cached products, don't clear them
+        _isLoading = false;
+        notifyListeners();
+        return;
+      }
+
       _error = e.toString();
       _isLoading = false;
       notifyListeners();
@@ -172,6 +183,12 @@ class ProductProvider with ChangeNotifier {
       }
     } catch (e) {
       print('❌ Background sync failed: $e');
+
+      // If 401 error, silently skip background sync
+      // User needs to login again, but don't disrupt their experience
+      if (e.toString().contains('401')) {
+        print('ℹ️ 401 error in background sync - skipping');
+      }
     } finally {
       _isSyncingInBackground = false;
     }
