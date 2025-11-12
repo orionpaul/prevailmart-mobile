@@ -4,6 +4,7 @@ import '../../config/app_colors.dart';
 import '../../config/api_config.dart';
 import '../../models/order_model.dart';
 import '../../services/api_service.dart';
+import '../../services/storage_service.dart';
 import 'customer_main_screen.dart';
 import 'track_order_screen.dart';
 import 'order_details_screen.dart';
@@ -37,12 +38,21 @@ class _OrdersScreenState extends State<OrdersScreen> with AutomaticKeepAliveClie
     });
 
     try {
-      print('🌐 GET ${ApiConfig.myOrders}');
+      // Check if user has a token before making request
+      final token = await storageService.getSecure(ApiConfig.tokenKey);
+      if (token == null) {
+        // User not authenticated, show empty state silently
+        if (mounted) {
+          setState(() {
+            _orders = [];
+            _isLoading = false;
+            _error = null; // Don't show error for guest users
+          });
+        }
+        return;
+      }
 
       final response = await apiService.get(ApiConfig.myOrders);
-
-      print('📬 Response status: ${response.statusCode}');
-      print('📬 Response data: ${response.data}');
 
       if (response.statusCode == 200) {
         final dynamic responseData = response.data;
@@ -62,22 +72,26 @@ class _OrdersScreenState extends State<OrdersScreen> with AutomaticKeepAliveClie
             _orders = data.map((json) => Order.fromJson(json)).toList();
             _isLoading = false;
           });
-          print('✅ Loaded ${_orders.length} orders');
         }
       } else {
         throw Exception('Server returned ${response.statusCode}');
       }
     } catch (e) {
-      print('❌ Error loading orders: $e');
+      // Only log non-401 errors
+      if (!e.toString().contains('401') && !e.toString().contains('Unauthorized')) {
+        print('❌ Error loading orders: $e');
+      }
 
       if (mounted) {
         setState(() {
-          _error = e.toString();
-          _isLoading = false;
-          // Show empty orders instead of error on first load
-          if (_orders.isEmpty) {
-            _orders = [];
+          // Don't show error for 401 - just show empty state
+          if (e.toString().contains('401') || e.toString().contains('Unauthorized')) {
+            _error = null;
+          } else {
+            _error = e.toString();
           }
+          _isLoading = false;
+          _orders = [];
         });
       }
     }
@@ -347,7 +361,9 @@ class _OrdersScreenState extends State<OrdersScreen> with AutomaticKeepAliveClie
                 vertical: 12,
               ),
             ),
-            child: const Text('Start Shopping'),
+            child: const Text('Start Shopping', style: TextStyle(
+              color: Colors.white
+            ),),
           ),
         ],
       ),

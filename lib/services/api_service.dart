@@ -45,7 +45,12 @@ class ApiService {
         return handler.next(response);
       },
       onError: (error, handler) {
-        print('❌ Error: ${error.response?.statusCode} ${error.message}');
+        // Don't log verbose 401 errors - just log a simple message
+        if (error.response?.statusCode == 401) {
+          print('🔐 401 Unauthorized - ${error.requestOptions.path}');
+        } else {
+          print('❌ Error: ${error.response?.statusCode} ${error.message}');
+        }
         return handler.next(error);
       },
     ));

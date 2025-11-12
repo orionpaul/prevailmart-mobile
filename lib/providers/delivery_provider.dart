@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../models/delivery_model.dart';
 import '../services/api_service.dart';
+import '../services/storage_service.dart';
 import '../config/api_config.dart';
 
 /// Delivery Provider - Manages delivery state for drivers
@@ -20,12 +21,22 @@ class DeliveryProvider with ChangeNotifier {
 
   /// Fetch my deliveries
   Future<void> fetchMyDeliveries() async {
-    print('📦 Fetching my deliveries...');
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
+      // Check if user has a token before making request
+      final token = await storageService.getSecure(ApiConfig.tokenKey);
+      if (token == null) {
+        // User not authenticated, clear deliveries silently
+        _deliveries = [];
+        _activeDelivery = null;
+        _isLoading = false;
+        notifyListeners();
+        return;
+      }
+
       final response = await apiService.get(ApiConfig.myDeliveries);
 
       if (response.statusCode == 200) {
@@ -40,12 +51,17 @@ class DeliveryProvider with ChangeNotifier {
         } catch (e) {
           _activeDelivery = null;
         }
-
-        print('✅ Fetched ${_deliveries.length} deliveries');
       }
     } catch (e) {
-      print('❌ Failed to fetch deliveries: $e');
-      _error = e.toString();
+      // Only log non-401 errors
+      if (!e.toString().contains('401') && !e.toString().contains('Unauthorized')) {
+        print('❌ Failed to fetch deliveries: $e');
+        _error = e.toString();
+      } else {
+        // For 401 errors, just clear the data silently
+        _deliveries = [];
+        _activeDelivery = null;
+      }
     } finally {
       _isLoading = false;
       notifyListeners();

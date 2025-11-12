@@ -27,7 +27,7 @@ class ProfileScreen extends StatelessWidget {
               slivers: [
                 // Beautiful App Bar with gradient
                 SliverAppBar(
-                  expandedHeight: 240,
+                  expandedHeight: 290,
                   floating: false,
                   pinned: true,
                   backgroundColor: AppColors.primary,
