@@ -223,8 +223,8 @@ class ProductProvider with ChangeNotifier {
     final lowerQuery = query.toLowerCase();
     return _products.where((p) {
       return p.name.toLowerCase().contains(lowerQuery) ||
-          (p.description?.toLowerCase().contains(lowerQuery) ?? false) ||
-          (p.category?.toLowerCase().contains(lowerQuery) ?? false);
+          (p.category?.toLowerCase().contains(lowerQuery) ?? false) ||
+          (p.brand?.toLowerCase().contains(lowerQuery) ?? false);
     }).toList();
   }
 
