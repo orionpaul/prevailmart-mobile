@@ -5,6 +5,7 @@ import 'providers/auth_provider.dart';
 import 'providers/cart_provider.dart';
 import 'providers/delivery_provider.dart';
 import 'providers/favorites_provider.dart';
+import 'providers/product_provider.dart';
 import 'services/storage_service.dart';
 import 'screens/splash_screen.dart';
 import 'screens/customer/customer_main_screen.dart';
@@ -29,6 +30,7 @@ class PrevailMartApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()..initialize()),
+        ChangeNotifierProvider(create: (_) => ProductProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
         ChangeNotifierProvider(create: (_) => DeliveryProvider()),
         ChangeNotifierProvider(create: (_) => FavoritesProvider()),

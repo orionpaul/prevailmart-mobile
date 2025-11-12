@@ -10,9 +10,9 @@ class ApiService {
   ApiService() {
     _dio = Dio(BaseOptions(
       baseUrl: ApiConfig.baseUrl,
-      connectTimeout: const Duration(seconds: 120), // Increased to 120 seconds
-      receiveTimeout: const Duration(seconds: 120), // Increased to 120 seconds
-      sendTimeout: const Duration(seconds: 120),    // Increased to 120 seconds
+      connectTimeout: const Duration(seconds: 30), // Optimized timeout
+      receiveTimeout: const Duration(seconds: 30),
+      sendTimeout: const Duration(seconds: 30),
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -21,6 +21,9 @@ class ApiService {
 
     print('🚀 API Service initialized');
     print('📍 Base URL: ${ApiConfig.baseUrl}');
+
+    // Add retry interceptor
+    _dio.interceptors.add(_RetryInterceptor(dio: _dio, retries: 3));
 
     // Add interceptors for logging and error handling
     _dio.interceptors.add(InterceptorsWrapper(
@@ -187,6 +190,53 @@ class ApiService {
     }
 
     return errorMessage;
+  }
+}
+
+/// Retry Interceptor - Automatically retries failed requests
+class _RetryInterceptor extends Interceptor {
+  final Dio dio;
+  final int retries;
+  final Duration retryDelay;
+
+  _RetryInterceptor({
+    required this.dio,
+    this.retries = 3,
+    this.retryDelay = const Duration(seconds: 2),
+  });
+
+  @override
+  Future<void> onError(DioException err, ErrorInterceptorHandler handler) async {
+    final extra = err.requestOptions.extra;
+    final retriesLeft = extra['retries'] ?? retries;
+
+    // Don't retry on authentication errors or client errors
+    if (err.response?.statusCode != null && err.response!.statusCode! < 500) {
+      return handler.next(err);
+    }
+
+    // Don't retry if no retries left
+    if (retriesLeft <= 0) {
+      return handler.next(err);
+    }
+
+    print('🔄 Retrying request (${retries - retriesLeft + 1}/$retries)...');
+
+    // Wait before retrying
+    await Future.delayed(retryDelay);
+
+    // Create new request with decremented retries
+    final options = err.requestOptions;
+    options.extra['retries'] = retriesLeft - 1;
+
+    try {
+      // Retry the request
+      final response = await dio.fetch(options);
+      return handler.resolve(response);
+    } on DioException catch (e) {
+      // If retry also fails, pass the error to the next interceptor
+      return handler.next(e);
+    }
   }
 }
 

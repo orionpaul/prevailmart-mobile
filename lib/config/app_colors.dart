@@ -4,14 +4,14 @@ import 'package:flutter/material.dart';
 class AppColors {
   // Primary Brand Colors - PrevailMart Blue (lighter, softer)
   static const Color primary = Color(0xFF425AAE); // Softer PrevailMart Blue
-  static const Color primaryDark = Color(0xFF364a93); // Softer dark blue
-  static const Color primaryLight = Color(0xFF6B84D4); // Lighter blue
+  static const Color primaryDark = Color(0xFF35488C); // Softer dark blue (matching website)
+  static const Color primaryLight = Color(0xFF5585DD); // Lighter blue (matching website)
   static const Color primaryLighter = Color(0xFFA8B9E8); // Much lighter blue
 
-  // Secondary Colors - Clean Blue Accent
-  static const Color secondary = Color(0xFF4A6CB7); // Use primary blue
-  static const Color secondaryDark = Color(0xFF3A5899);
-  static const Color secondaryLight = Color(0xFF5A7CC7);
+  // Secondary Colors - Clean Blue Accent (matching website)
+  static const Color secondary = Color(0xFF425AAE); // Match primary
+  static const Color secondaryDark = Color(0xFF35488C);
+  static const Color secondaryLight = Color(0xFF5585DD);
 
   // Accent Colors - Professional Palette
   static const Color accent = Color(0xFFFF6B6B); // Red from website
@@ -23,9 +23,9 @@ class AppColors {
   static const Color success = Color(0xFF22C55E); // Fresh Green
   static const Color info = Color(0xFF4A6CB7);
 
-  // Gradients for Premium Look - Clean Blue Theme
+  // Gradients for Premium Look - Clean Blue Theme (matching website)
   static const LinearGradient primaryGradient = LinearGradient(
-    colors: [Color(0xFF4A6CB7), Color(0xFF3A5899)],
+    colors: [Color(0xFF425AAE), Color(0xFF5585DD)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
