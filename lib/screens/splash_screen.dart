@@ -133,7 +133,7 @@ class _SplashScreenState extends State<SplashScreen>
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          // Logo with elegant animation
+                          // Logo with elegant animation - bigger and no circle
                           AnimatedBuilder(
                             animation: _pulseController,
                             builder: (context, child) {
@@ -141,20 +141,17 @@ class _SplashScreenState extends State<SplashScreen>
                               return Transform.scale(
                                 scale: pulse,
                                 child: Container(
-                                  width: 140,
-                                  height: 140,
+                                  width: 200,
+                                  height: 200,
                                   decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: AppColors.white,
                                     boxShadow: [
                                       BoxShadow(
-                                        color: AppColors.primary.withOpacity(0.2),
-                                        blurRadius: 30,
-                                        spreadRadius: 5,
+                                        color: AppColors.primary.withOpacity(0.15),
+                                        blurRadius: 40,
+                                        spreadRadius: 10,
                                       ),
                                     ],
                                   ),
-                                  padding: const EdgeInsets.all(20),
                                   child: Image.asset(
                                     'assets/logo/logo.png',
                                     fit: BoxFit.contain,

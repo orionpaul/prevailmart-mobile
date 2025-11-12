@@ -42,6 +42,7 @@ class _CustomerMainScreenState extends State<CustomerMainScreen> {
   Widget _buildNavigator(int index, Widget child) {
     return Navigator(
       key: _navigatorKeys[index],
+      initialRoute: '/',
       onGenerateRoute: (settings) {
         return MaterialPageRoute(
           builder: (context) => child,
