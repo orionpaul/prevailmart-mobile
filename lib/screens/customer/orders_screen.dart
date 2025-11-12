@@ -336,7 +336,10 @@ class _OrdersScreenState extends State<OrdersScreen> with AutomaticKeepAliveClie
           ),
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              // Navigate to home tab instead of popping
+              CustomerMainScreen.switchTab(context, 0);
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               padding: const EdgeInsets.symmetric(

@@ -8,6 +8,7 @@ import '../../config/api_config.dart';
 import '../../models/product_model.dart';
 import '../../widgets/customer/product_card.dart';
 import '../../utils/logger.dart';
+import 'customer_main_screen.dart';
 
 /// Favorites/Wishlist Screen
 /// Displays all products saved to the user's favorites
@@ -78,7 +79,6 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = context.watch<AuthProvider>();
     final favoritesProvider = context.watch<FavoritesProvider>();
 
     return Scaffold(
@@ -250,7 +250,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             const SizedBox(height: 32),
             OutlinedButton(
               onPressed: () {
-                Navigator.pop(context);
+                // Navigate to home tab to browse products
+                CustomerMainScreen.switchTab(context, 0);
               },
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.primary,
