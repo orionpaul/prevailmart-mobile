@@ -22,7 +22,7 @@ class CustomButton extends StatefulWidget {
     this.onPressed,
     this.isLoading = false,
     this.isOutlined = false,
-    this.isWhite = false, // New white variant
+    this.isWhite = true, // Default to white with border
     this.color,
     this.textColor,
     this.icon,

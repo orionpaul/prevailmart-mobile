@@ -663,7 +663,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   text: 'Place Order',
                   onPressed: _placeOrder,
                   isLoading: _isPlacingOrder,
-                  useGradient: true,
+                  isWhite: true,
                   height: 56,
                   icon: Icons.check_circle_outline,
                   borderRadius: 16,
