@@ -175,7 +175,7 @@ class _HomeScreenNewState extends State<HomeScreenNew> with AutomaticKeepAliveCl
                       ),
                       const SizedBox(width: 12),
 
-                      // Location indicator (expandable)
+                      // Location indicator - Simplified
                       Expanded(
                         child: GestureDetector(
                           onTap: () {
@@ -189,52 +189,35 @@ class _HomeScreenNewState extends State<HomeScreenNew> with AutomaticKeepAliveCl
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                             decoration: BoxDecoration(
-                              color: AppColors.white.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: AppColors.white.withOpacity(0.3),
-                                width: 1,
-                              ),
+                              color: AppColors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(25),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
-                                  Icons.location_on,
+                                  Icons.location_on_rounded,
                                   color: AppColors.white,
-                                  size: 18,
+                                  size: 16,
                                 ),
                                 const SizedBox(width: 6),
                                 Flexible(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        'Deliver to',
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          color: AppColors.white.withOpacity(0.8),
-                                        ),
-                                      ),
-                                      Text(
-                                        _selectedAddress?.label ?? 'Select Location',
-                                        style: const TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w700,
-                                          color: AppColors.white,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ],
+                                  child: Text(
+                                    _selectedAddress?.label ?? 'Add Location',
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.white,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                                 const SizedBox(width: 4),
                                 Icon(
-                                  Icons.keyboard_arrow_down,
+                                  Icons.keyboard_arrow_down_rounded,
                                   color: AppColors.white,
-                                  size: 18,
+                                  size: 16,
                                 ),
                               ],
                             ),
@@ -243,47 +226,31 @@ class _HomeScreenNewState extends State<HomeScreenNew> with AutomaticKeepAliveCl
                       ),
                       const SizedBox(width: 12),
 
-                      // Notification bell with badge
+                      // Notification bell - Simplified
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: AppColors.white.withOpacity(0.15),
+                          color: AppColors.white.withOpacity(0.2),
                           shape: BoxShape.circle,
-                          border: Border.all(
-                            color: AppColors.white.withOpacity(0.3),
-                            width: 1,
-                          ),
                         ),
                         child: Stack(
                           clipBehavior: Clip.none,
                           children: [
                             Icon(
-                              Icons.notifications_outlined,
+                              Icons.notifications_none_rounded,
                               color: AppColors.white,
-                              size: 22,
+                              size: 20,
                             ),
                             // Notification badge
                             Positioned(
-                              right: -2,
-                              top: -2,
+                              right: -1,
+                              top: -1,
                               child: Container(
-                                padding: const EdgeInsets.all(2),
+                                width: 8,
+                                height: 8,
                                 decoration: const BoxDecoration(
                                   color: AppColors.error,
                                   shape: BoxShape.circle,
-                                ),
-                                constraints: const BoxConstraints(
-                                  minWidth: 16,
-                                  minHeight: 16,
-                                ),
-                                child: const Text(
-                                  '3',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  textAlign: TextAlign.center,
                                 ),
                               ),
                             ),
