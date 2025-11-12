@@ -11,7 +11,7 @@ import '../../widgets/customer/product_card_shimmer.dart';
 import '../../widgets/common/promotional_banner_carousel.dart';
 import 'cart_screen.dart';
 import 'products_screen.dart';
-import 'simple_location_screen.dart';
+import 'location_picker_screen.dart';
 import 'product_search_screen.dart';
 import 'customer_main_screen.dart';
 import '../../models/address_model.dart';
@@ -182,7 +182,9 @@ class _HomeScreenNewState extends State<HomeScreenNew> with AutomaticKeepAliveCl
                             final selectedAddress = await Navigator.push<Address>(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => const SimpleLocationScreen(),
+                                builder: (_) => LocationPickerScreen(
+                                  initialAddress: _selectedAddress,
+                                ),
                               ),
                             );
                             if (selectedAddress != null) {
